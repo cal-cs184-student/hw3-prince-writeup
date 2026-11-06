@@ -28,79 +28,293 @@
 	<body>
 		<div class="container">
 		<h1>CS184/284A Fall 2026 Homework 3 Write-Up</h1>
-		<div style="text-align: center;">Names: </div>
+		<div style="text-align: center;">Names: Dongyang Dai and Zihan Wang</div>
 
 		<br>
 
-		Link to webpage: (TODO) <a href="https://cs184.eecs.berkeley.edu/fa26">cs184.eecs.berkeley.edu/fa26</a>
-		Link to GitHub repository: (TODO) <a href="https://cs184.eecs.berkeley.edu/fa26">cs184.eecs.berkeley.edu/fa26</a>
-		
-		<figure>
-			<img src="assets/cornell.png" alt="Cornell Boxes with Bunnies" style="width:70%"/>
-			<figcaption>You can add images with captions!</figcaption>
-		</figure>
+		<strong>Webpage:</strong> <a href="https://cal-cs184-student.github.io/hw3-prince-writeup/">cal-cs184-student.github.io/hw3-prince-writeup/</a>
 
-		<!--
-		We've already added one heading per part, to make your write-up as navigable when grading. Please fit your write-up within these sections!
-		-->
+		<br>
+
+		<strong>Repository:</strong> <a href="https://github.com/cal-cs184-student/hw3-prince">github.com/cal-cs184-student/hw3-prince</a>
+
+		<br>
 
 		<h2>Overview</h2>
-		Give a high-level overview of what you implemented in this homework. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.
+		<p>[TODO: Give a high-level overview of the path tracer you implemented across Parts 1–5.]</p>
+		<p>[TODO: Summarize the most interesting ideas you learned, the main problems you encountered, and how you solved them.]</p>
+
+		<figure>
+			<img src="assets/cornell.png" alt="Selected Cornell box rendering results" style="width: 70%;"/>
+			<figcaption>Selected rendering results from the completed path tracer.</figcaption>
+		</figure>
 
 		<h2>Part 1: Ray Generation and Scene Intersection</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>[TODO: Walk through the rendering pipeline from generating a camera ray and sampling a pixel to finding the nearest primitive intersection. Explain how ray bounds and surface data are updated.]</p>
+		<p>[TODO: Explain your ray–triangle intersection algorithm in your own words, including how you determine whether the hit lies inside the triangle and how you interpolate the normal.]</p>
 
-		<p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p>
+		<h3>Ray generation and primitive intersection results</h3>
 		<div style="display: flex; flex-direction: column; align-items: center;">
 			<table style="width: 100%; text-align: center; border-collapse: collapse;">
-			  <tr>
-				<td style="text-align: center;">
-				  <img src="assets/cornell.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
-				</td>
-				<td style="text-align: center;">
-				  <img src="assets/cornell.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
-				</td>
-			  </tr>
-			  <tr>
-				<td style="text-align: center;">
-				  <img src="assets/cornell.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
-				</td>
-				<td style="text-align: center;">
-				  <img src="assets/cornell.png" width="400px"/>
-				  <figcaption>Caption goes here.</figcaption>
-				</td>
-			  </tr>
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBempty_task2.png" style="width: 100%;" alt="Camera-ray direction visualization for CBempty"/>
+						<figcaption>CBempty after camera-ray generation and pixel sampling.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBempty_task3.png" style="width: 100%;" alt="Normal-shaded CBempty after triangle intersection"/>
+						<figcaption>CBempty after ray–triangle intersection.</figcaption>
+					</td>
+				</tr>
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part1/banana.png" style="width: 100%;" alt="Normal-shaded banana scene"/>
+						<figcaption>Normal-shaded banana scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBspheres.png" style="width: 100%;" alt="Normal-shaded Cornell box spheres scene"/>
+						<figcaption>Normal-shaded CBspheres scene.</figcaption>
+					</td>
+				</tr>
 			</table>
 		</div>
-		
+
 		<h2>Part 2: Bounding Volume Hierarchy</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>[TODO: Walk through your recursive BVH construction algorithm. State the leaf condition, the axis-selection rule, the splitting-point heuristic, and how you handle a degenerate split.]</p>
+		<p>[TODO: Explain how your bounding-box test and BVH traversal find the nearest valid intersection while skipping irrelevant primitives.]</p>
+
+		<h3>Large scenes rendered with BVH acceleration</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part2/cow.png" style="width: 100%;" alt="Normal-shaded cow scene"/>
+						<figcaption>Normal-shaded cow scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part2/maxplanck.png" style="width: 100%;" alt="Normal-shaded Max Planck scene"/>
+						<figcaption>Normal-shaded Max Planck scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part2/CBlucy.png" style="width: 100%;" alt="Normal-shaded Cornell box Lucy scene"/>
+						<figcaption>Normal-shaded CBlucy scene.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<h3>Rendering-time comparison</h3>
+		<table style="width: 100%; border-collapse: collapse; text-align: left;">
+			<tr>
+				<th style="border: 1px solid #aaa; padding: 8px;">Scene</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">Without BVH</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">With BVH</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">Speedup</th>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">Cow</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">Max Planck</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">CBlucy</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">[TODO]</td>
+			</tr>
+		</table>
+		<p>[TODO: In one paragraph, compare the rendering times above and explain why BVH acceleration changes the running time.]</p>
 
 		<h2>Part 3: Direct Illumination</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>[TODO: Walk through your uniform-hemisphere direct-lighting implementation, including the sampling distribution, shadow rays, visibility test, BSDF evaluation, cosine factor, and normalization.]</p>
+		<p>[TODO: Walk through your light-importance-sampling implementation and explain how sampling a light source directly changes the estimator.]</p>
+
+		<h3>Uniform hemisphere sampling</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_1.png" style="width: 100%;" alt="Uniform hemisphere sampling with 1 light ray"/>
+						<figcaption>1 light ray.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_4.png" style="width: 100%;" alt="Uniform hemisphere sampling with 4 light rays"/>
+						<figcaption>4 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_16.png" style="width: 100%;" alt="Uniform hemisphere sampling with 16 light rays"/>
+						<figcaption>16 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_64.png" style="width: 100%;" alt="Uniform hemisphere sampling with 64 light rays"/>
+						<figcaption>64 light rays.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<h3>Light importance sampling</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_1.png" style="width: 100%;" alt="Light importance sampling with 1 light ray"/>
+						<figcaption>1 light ray.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_4.png" style="width: 100%;" alt="Light importance sampling with 4 light rays"/>
+						<figcaption>4 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_16.png" style="width: 100%;" alt="Light importance sampling with 16 light rays"/>
+						<figcaption>16 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_64.png" style="width: 100%;" alt="Light importance sampling with 64 light rays"/>
+						<figcaption>64 light rays.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<p>[TODO: Compare the soft-shadow noise at 1, 4, 16, and 64 light rays while keeping 1 sample per pixel. Describe where the noise is most visible and how it changes.]</p>
+		<p>[TODO: In one paragraph, compare uniform hemisphere sampling with light importance sampling. Explain the visual difference and why one estimator converges faster.]</p>
+
+		<figure>
+			<img src="assets/part3/hemisphere_64_32.png" alt="Higher-sample direct-illumination render" style="width: 70%;"/>
+			<figcaption>Uniform hemisphere sampling with 64 samples per pixel and 32 light rays.</figcaption>
+		</figure>
 
 		<h2>Part 4: Global Illumination</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>[TODO: Walk through your indirect-lighting implementation, including diffuse BSDF sampling, recursive ray generation, throughput weighting, the depth limit, accumulation of emission/direct lighting, and Russian Roulette termination.]</p>
+
+		<h3>Global illumination results</h3>
+		<div style="display: flex; gap: 12px; align-items: flex-start; text-align: center;">
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part4/global/CBspheres_global_m5_s1024.png" alt="Globally illuminated CBspheres scene" style="width: 100%;"/>
+				<figcaption>CBspheres, 1024 samples per pixel and max ray depth 5.</figcaption>
+			</figure>
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part4/global/CBbunny_global_m5_s1024.png" alt="Globally illuminated CBbunny scene" style="width: 100%;"/>
+				<figcaption>CBbunny, 1024 samples per pixel and max ray depth 5.</figcaption>
+			</figure>
+		</div>
+		<p>[TODO: Describe the visible global-illumination effects in these renders, such as color bleeding and illumination in regions not reached directly by a light source.]</p>
+
+		<h3>Direct and indirect illumination</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_direct_m1_s1024.png" style="width: 100%;" alt="CBbunny with direct illumination only"/>
+						<figcaption>Direct illumination only.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_indirect_m5_s1024.png" style="width: 100%;" alt="CBbunny with indirect illumination only"/>
+						<figcaption>Indirect illumination only.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_global_m5_s1024.png" style="width: 100%;" alt="CBbunny with direct and indirect illumination"/>
+						<figcaption>Direct and indirect illumination.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<p>[TODO: Compare the direct-only, indirect-only, and combined renders. Identify which scene features each lighting component contributes.]</p>
+
+		<h3>Exact bounce of light</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m0_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m1_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m2_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m3_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m4_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m5_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 5"/><figcaption>m = 5.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>[TODO: Explain what is visible in the second and third bounces and how these bounces improve the rendered image compared with rasterization.]</p>
+
+		<h3>Accumulated bounces of light</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m0_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m1_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m2_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m3_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m4_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m5_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 5"/><figcaption>m = 5.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>[TODO: Compare accumulated and unaccumulated bounces for each depth. Explain why the accumulated sequence converges toward the full global-illumination result.]</p>
+
+		<h3>Russian Roulette termination</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m0_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m1_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m2_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m3_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m4_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m100_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 100"/><figcaption>m = 100.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>[TODO: Explain how Russian Roulette terminates paths without biasing the estimator, then compare the renders as the maximum ray depth increases.]</p>
+
+		<h3>Samples per pixel</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0001_l4_m5.png" style="width: 100%;" alt="CBbunny with 1 sample per pixel"/><figcaption>1 sample per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0002_l4_m5.png" style="width: 100%;" alt="CBbunny with 2 samples per pixel"/><figcaption>2 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0004_l4_m5.png" style="width: 100%;" alt="CBbunny with 4 samples per pixel"/><figcaption>4 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0008_l4_m5.png" style="width: 100%;" alt="CBbunny with 8 samples per pixel"/><figcaption>8 samples per pixel.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0016_l4_m5.png" style="width: 100%;" alt="CBbunny with 16 samples per pixel"/><figcaption>16 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0064_l4_m5.png" style="width: 100%;" alt="CBbunny with 64 samples per pixel"/><figcaption>64 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp1024_l4_m5.png" style="width: 100%;" alt="CBbunny with 1024 samples per pixel"/><figcaption>1024 samples per pixel.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>[TODO: Compare the noise level at 1, 2, 4, 8, 16, 64, and 1024 samples per pixel. Identify which regions converge slowly and explain why.]</p>
 
 		<h2>Part 5: Adaptive Sampling</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<p>[TODO: Explain adaptive sampling and walk through your implementation. Define the running statistics, confidence interval, stopping test, sampling batch size, and maximum sample count.]</p>
+		<p>[IMAGE PLACEHOLDER: Insert the first scene rendered with at least 2048 samples per pixel, 1 sample per light, and max ray depth at least 5.]</p>
+		<p>[IMAGE PLACEHOLDER: Insert the corresponding sampling-rate visualization for the first scene.]</p>
+		<p>[TODO: Analyze where the first scene uses high and low sampling rates and connect the pattern to image variance or noise.]</p>
+		<p>[IMAGE PLACEHOLDER: Insert the second scene rendered with at least 2048 samples per pixel, 1 sample per light, and max ray depth at least 5.]</p>
+		<p>[IMAGE PLACEHOLDER: Insert the corresponding sampling-rate visualization for the second scene.]</p>
+		<p>[TODO: Analyze where the second scene uses high and low sampling rates and compare it with the first scene.]</p>
 
 		<h2>(Optional) Part 6: Extra Credit Opportunities</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-		
-		<h2>Additional Notes (please remove)</h2>
-		<ul>
-			<li>You can also add code if you'd like as so: <code>code code code</code></li>
-			<li>If you'd like to add math equations, 
-				<ul>
-					<li>You can write inline equations like so: \( a^2 + b^2 = c^2 \)</li>
-					<li>You can write display equations like so: \[ a^2 + b^2 = c^2 \]</li>
-				</ul>
-			</li>
-		</ul>
+		<p>[TODO: If you completed extra credit, describe the approach and relevant implementation details here. Add screenshots and timing/speedup results where applicable. Otherwise, remove this section.]</p>
+
+		<h2>Partner Collaboration</h2>
+		<p>[TODO: Briefly describe how the two partners divided and coordinated the work, how the collaboration went, and what you learned from working together.]</p>
+
+		<h2>Acknowledgement of AI</h2>
+		<p>[TODO: State the extent to which you used LLM assistance for this homework, including any conceptual, coding, debugging, or write-up help.]</p>
 		</div>
 	</body>
 </html>
