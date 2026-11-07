@@ -1,744 +1,858 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="CS184/284A Fall 2026 Homework 3: camera rays, primitive intersection, BVH acceleration, direct and global illumination, and adaptive sampling.">
-<title>CS184 HW3 — PathTracer | Dongyang Dai &amp; Zihan Wang</title>
-<style>
-:root { --ink:#182735; --muted:#586777; --accent:#246879; --line:#d8e1e6; --paper:#ffffff; --wash:#f4f7f8; --soft:#edf4f5; }
-* { box-sizing:border-box; }
-html { scroll-behavior:smooth; scroll-padding-top:80px; }
-body { margin:0; font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:var(--ink); background:var(--paper); font-size:16px; line-height:1.72; }
-a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:3px; }
-a:hover { color:#163f49; }
-.container { max-width:1120px; margin:0 auto; padding:0 40px; }
-header { border-bottom:1px solid var(--line); padding:60px 0 32px; }
-.eyebrow { color:var(--accent); font-size:12px; font-weight:750; letter-spacing:.16em; text-transform:uppercase; margin:0 0 10px; }
-h1 { font-size:clamp(32px,4.4vw,50px); line-height:1.12; font-weight:750; letter-spacing:-.035em; margin:0 0 16px; }
-.subtitle { font-size:20px; color:var(--muted); margin:0 0 18px; }
-.authors { font-weight:650; margin:0 0 10px; }
-.project-links { display:flex; flex-wrap:wrap; gap:8px 24px; font-size:13px; }
-.project-links a { overflow-wrap:anywhere; }
-nav { position:sticky; top:0; z-index:20; border-bottom:1px solid var(--line); background:rgba(255,255,255,.98); }
-nav .container { display:flex; gap:6px 23px; flex-wrap:wrap; padding-top:11px; padding-bottom:11px; }
-nav a { font-size:13px; font-weight:650; text-decoration:none; white-space:nowrap; }
-main { padding-bottom:42px; }
-section { margin-top:52px; }
-.section-label { margin:0 0 5px; color:var(--accent); font-size:12px; text-transform:uppercase; font-weight:750; letter-spacing:.12em; }
-h2 { font-size:28px; line-height:1.25; margin:0 0 23px; letter-spacing:-.025em; padding-bottom:13px; border-bottom:2px solid var(--ink); }
-h3 { font-size:21px; line-height:1.35; margin:31px 0 13px; letter-spacing:-.015em; }
-h4 { font-size:16px; margin:20px 0 8px; }
-p { margin:0 0 16px; }
-.lede { font-size:18px; }
-code, pre { font-family:"Cascadia Code",Consolas,"Liberation Mono",monospace; }
-code { font-size:.88em; padding:1px 4px; border-radius:3px; background:var(--wash); overflow-wrap:anywhere; }
-pre { margin:16px 0; padding:17px 19px; font-size:12.5px; line-height:1.7; background:#eff3f5; border:1px solid var(--line); border-radius:6px; white-space:pre-wrap; overflow-wrap:anywhere; }
-pre code { background:none; padding:0; font-size:inherit; }
-.equation { font-family:"Cambria Math","STIX Two Math",Georgia,serif; font-size:19px; padding:15px 20px; margin:18px 0; border-left:3px solid var(--accent); background:var(--wash); overflow-x:auto; text-align:center; line-height:1.9; }
-.equation .eq-row { display:block; }
-.equation sub, .equation sup { font-size:.72em; }
-.gallery { display:grid; gap:24px 20px; margin:19px 0 25px; align-items:start; }
-.cols-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
-.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
-.cols-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
-figure { margin:20px 0 24px; min-width:0; }
-.gallery figure { margin:0; }
-.image-link { display:block; line-height:0; border:1px solid #e0e5e8; border-radius:4px; overflow:hidden; background:#0b0b0b; }
-img { display:block; width:100%; height:auto; }
-figcaption { font-size:12.5px; line-height:1.55; margin-top:9px; color:var(--muted); }
-figcaption strong { font-weight:650; color:var(--ink); }
-.figure-number { color:var(--accent); font-weight:650; }
-figcaption code { font-size:11px; }
-.single-figure { max-width:680px; margin:22px auto 25px; }
-.hero { margin:26px 0; }
-.table-wrap { overflow-x:auto; margin:18px 0 20px; }
-table { width:100%; border-collapse:collapse; font-size:14px; line-height:1.55; }
-caption { text-align:left; font-size:13px; color:var(--muted); margin-bottom:10px; }
-th { background:var(--soft); color:var(--ink); text-align:left; font-weight:650; padding:11px 13px; border-top:1px solid var(--line); border-bottom:2px solid var(--line); }
-td { padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
-.num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.note { padding:13px 17px; margin:20px 0; border-left:3px solid #94b5bf; background:#f2f7f8; font-size:13px; line-height:1.65; }
-.note p:last-child { margin-bottom:0; }
-.meta { font-size:13px; color:var(--muted); }
-.reference { font-size:12px; vertical-align:super; text-decoration:none; }
-.flow { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0; font-size:13px; font-weight:650; align-items:center; }
-.flow span { padding:7px 11px; border:1px solid var(--line); border-radius:5px; background:var(--wash); }
-.flow b { color:var(--accent); }
-.legend { display:flex; gap:14px; align-items:center; font-size:13px; margin:15px 0; }
-.legend-bar { width:160px; height:10px; background:linear-gradient(to right,#0000ff,#00a5df,#00db38,#ffff00,#ff0000); border-radius:9px; }
-details { margin:20px 0; border:1px solid var(--line); border-radius:6px; padding:14px 17px; }
-summary { cursor:pointer; font-weight:650; color:var(--accent); }
-details[open] summary { margin-bottom:14px; }
-.logs { max-width:100%; }
-.logs figcaption { font-size:12px; }
-.diagnostics img { max-height:95px; object-fit:contain; background:#ff0000; }
-.references { font-size:13px; color:var(--muted); }
-.references p { margin-bottom:8px; }
-footer { border-top:1px solid var(--line); padding:24px 0 40px; color:var(--muted); font-size:12px; }
-@media (max-width:760px) {
- .container { padding-left:22px; padding-right:22px; }
- header { padding-top:35px; }
- section { margin-top:37px; }
- h2 { font-size:24px; }
- nav .container { gap:8px 16px; }
- nav { position:static; }
- .cols-3,.cols-4 { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .gallery { gap:20px 14px; }
-}
-@media (max-width:480px) {
- .cols-2,.cols-3,.cols-4 { grid-template-columns:1fr; }
- body { font-size:15px; }
- .equation { font-size:17px; padding:12px; }
- .project-links { display:block; }
- .project-links a { display:block; margin-top:5px; }
-}
-@media print {
- @page { size:A4; margin:15mm 14mm; }
- html { scroll-padding-top:0; }
- body { font-size:10pt; line-height:1.5; color:#16212b; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
- .container { max-width:none; padding:0; }
- header { padding:0 0 12pt; }
- h1 { font-size:25pt; }
- .subtitle { font-size:14pt; }
- nav,.screen-only { display:none !important; }
- section { margin-top:23pt; }
- h2 { font-size:18pt; margin-bottom:12pt; padding-bottom:6pt; break-after:avoid; }
- h3 { font-size:13pt; margin-top:18pt; margin-bottom:8pt; break-after:avoid; }
- p { margin-bottom:9pt; orphans:3; widows:3; }
- .lede { font-size:11pt; }
- .gallery { gap:11pt; margin:12pt 0; }
- .cols-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .cols-3,.cols-4 { grid-template-columns:repeat(3,minmax(0,1fr)); }
- figure, .gallery figure, tr, .equation, .note { break-inside:avoid; }
- figure { margin:12pt 0; }
- figcaption { font-size:8pt; line-height:1.4; margin-top:5pt; }
- .equation { font-size:11.5pt; padding:8pt 10pt; margin:10pt 0; }
- table { font-size:8.5pt; }
- th,td { padding:6pt; }
- .table-wrap { overflow:visible; }
- thead { display:table-header-group; }
- .note,.meta { font-size:8.5pt; }
- .single-figure { max-width:125mm; }
- .project-links,.references { font-size:8pt; }
- details { border:none; padding:0; margin:15pt 0; }
- details > summary { font-size:12pt; margin-bottom:9pt; }
- details > summary::marker { content:""; }
- .logs .image-link { max-width:165mm; margin:auto; }
- .logs img { max-height:65mm; object-fit:contain; }
- pre { font-size:7.5pt; padding:9pt; break-inside:avoid; }
- footer { font-size:8pt; padding-top:12pt; }
-}
-</style>
-</head>
-<body>
-<header><div class="container">
-<p class="eyebrow">UC Berkeley · CS184/284A · Fall 2026</p>
-<h1>Homework 3: PathTracer</h1>
-<p class="subtitle">From camera rays to adaptive global illumination</p>
-<p class="authors">Dongyang Dai and Zihan Wang</p>
-<div class="project-links"><a href="https://cal-cs184-student.github.io/hw3-prince-writeup/">Write-up website</a><a href="https://github.com/cal-cs184-student/hw3-prince">Code repository</a><a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/deliverables/">Assignment &amp; deliverables</a></div>
-</div></header>
-<nav aria-label="Report sections"><div class="container"><a href="#overview">Overview</a><a href="#part1">01 · Rays</a><a href="#part2">02 · BVH</a><a href="#part3">03 · Direct light</a><a href="#part4">04 · Global light</a><a href="#part5">05 · Adaptive sampling</a><a href="#collaboration">Collaboration</a><a href="#evidence">Evidence</a></div></nav>
-<main class="container">
-<section id="overview">
-<p class="section-label">Project overview</p><h2>A Monte Carlo path tracer</h2>
-<p class="lede">This project connects geometric visibility with light transport. Starting from a pixel on the image plane, the renderer generates camera rays, finds the nearest surface, and estimates the radiance arriving at the camera.</p>
-<p>Part 1 establishes the camera model and ray–triangle and ray–sphere intersections. Part 2 organizes primitives in a bounding volume hierarchy so that a ray can reject whole groups of geometry. Parts 3 and 4 add diffuse reflection, direct-light estimators, and recursive indirect illumination. Part 5 allocates a different number of samples to each pixel according to an estimated convergence criterion.</p>
-<div class="flow" aria-label="Rendering pipeline"><span>Pixel sample</span><b>→</b><span>Camera ray</span><b>→</b><span>BVH / nearest hit</span><b>→</b><span>Light transport</span><b>→</b><span>Pixel average</span></div>
-<p>The most useful lesson was that correct geometry, efficient traversal, and low-variance sampling solve different problems. BVH acceleration reduces the cost of finding a hit; importance sampling makes lighting samples more useful; adaptive sampling avoids spending the full sample budget on already-stable pixels. Debugging also exposed the importance of small invariants: a direction must be normalized as a vector, the valid ray interval must have its near bound before its far bound, and accumulated color must be averaged only after sampling finishes.</p>
+<html>
+	<head>
+		<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+			h1 {
+				text-align: center;
+			}
 
-<figure class="hero" id="figure-1">
-      <a class="image-link" href="assets/cornell.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Cornell-box lighting overview.">
-        <img src="assets/cornell.png" alt="Cornell-box lighting overview." width="1440" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 1.</span> <strong>Cornell-box lighting overview.</strong> Direct illumination, a noisy global-illumination estimate, and a smoother global-illumination result, from left to right.</figcaption>
-    </figure>
-</section>
-<section id="part1"><p class="section-label">Part 01</p><h2>Part 1: Ray Generation and Scene Intersection</h2>
-<h3>From a pixel to a world-space ray</h3>
-<p>For each pixel <code>(x, y)</code>, <code>raytrace_pixel()</code> draws a random offset inside the unit square. Adding that offset to the pixel origin and dividing by the image width and height gives normalized image coordinates <i>(u, v)</i>. The camera looks along its local negative z-axis. A sample on the canonical image plane at z = −1 therefore defines the camera-space direction below, with the field-of-view angles converted from degrees to radians.</p>
+			.container {
+				margin: 0 auto;
+				padding: 60px 20%;
+			}
 
-<div class="equation" role="group" aria-label="Equation">d<sub>camera</sub> = ((2u − 1) tan(hFov / 2), (2v − 1) tan(vFov / 2), −1)</div>
-<p>Multiplying by <code>c2w</code> rotates this direction into world space; normalizing the resulting vector gives the ray direction. The ray origin is the camera position. We initialize <code>min_t = nClip</code> and <code>max_t = fClip</code>, and initialize the camera ray's depth from <code>max_ray_depth</code> before estimating radiance. A valid intersection must lie inside this interval. After a closer hit is found, its distance replaces <code>max_t</code>, preventing a later, farther surface from overwriting the nearest hit.</p>
-<p>Each sample returns an RGB radiance estimate. We accumulate these estimates and divide by the actual number of samples at the end. The intersection record carries the distance, shading normal, primitive pointer, and BSDF pointer, so the next stage knows both where the ray hit and how that surface scatters light.</p>
-<h3>Ray–triangle intersection</h3>
-<p>The Möller–Trumbore calculation solves for the same point in two forms: a point along the ray and a barycentric combination of the triangle vertices. With <i>e₁ = p₂ − p₁</i> and <i>e₂ = p₃ − p₁</i>, the unknowns are the ray parameter <i>t</i> and two barycentric coordinates <i>u</i> and <i>v</i>.</p>
+			figure {
+				text-align: center;
+			}
 
-<div class="equation" role="group" aria-label="Equation">O + tD = p<sub>1</sub> + u e<sub>1</sub> + v e<sub>2</sub></div>
-<p>We first compute <code>pvec = cross(D, e2)</code> and <code>det = dot(e1, pvec)</code>. If <code>abs(det) &lt; 1e-8</code>, the ray is parallel or the triangle is degenerate, so we reject the test. Otherwise, the dot and cross products give <i>u</i>, <i>v</i>, and <i>t</i>. The sign of the determinant is not used to discard back-facing triangles. The candidate is accepted only when it satisfies both the barycentric bounds and the ray interval:</p>
+			img {
+				display: inline-block;
+			}
 
-<div class="equation" role="group" aria-label="Equation">u ≥ 0, &nbsp; v ≥ 0, &nbsp; u + v ≤ 1, &nbsp; min_t ≤ t ≤ max_t</div>
-<p>The weights of the three vertices are <i>1 − u − v</i>, <i>u</i>, and <i>v</i>. We interpolate the vertex normals using those weights and normalize the result. This produces a smoothly varying shading normal rather than one constant normal for the whole triangle.</p>
+			body {
+				font-family: 'Inter', sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+		<h1>CS184/284A Fall 2026 Homework 3 Write-Up</h1>
+		<div style="text-align: center;">Names: Dongyang Dai and Zihan Wang</div>
 
-<div class="equation" role="group" aria-label="Equation">n = normalize((1 − u − v)n<sub>1</sub> + u n<sub>2</sub> + v n<sub>3</sub>)</div>
-<h3>Ray–sphere intersection</h3>
-<p>For a sphere centered at <i>C</i> with radius <i>R</i>, substituting the ray into the sphere equation gives a quadratic. Let <i>oc = O − C</i>, <i>a = D · D</i>, <i>h = D · oc</i>, and <i>c = oc · oc − R²</i>. The reduced discriminant is <i>Δ = h² − ac</i>; when it is nonnegative, the two roots are:</p>
+		<br>
 
-<div class="equation" role="group" aria-label="Equation">t<sub>1,2</sub> = (−h ∓ √Δ) / a</div>
-<p>We select the smaller root inside the valid ray interval, falling back to the larger root if necessary. This also handles rays that start inside a sphere. At the accepted hit point <i>P</i>, the outward normal is <i>normalize(P − C)</i>. As with triangles, both intersection functions update the ray's upper bound, while <code>intersect()</code> additionally records surface information.</p>
-<h3>Ray-generation and primitive-intersection results</h3>
-<p>The first pair below visualizes camera-ray directions before geometric shading; it should not show recognizable objects. The second pair shows actual normal-shaded geometry after the intersection routines are implemented.</p>
+		<strong>Webpage:</strong> <a href="https://cal-cs184-student.github.io/hw3-prince-writeup/">cal-cs184-student.github.io/hw3-prince-writeup/</a>
 
-<div class="gallery cols-2 "><figure class="" id="figure-2">
-      <a class="image-link" href="assets/part1/CBempty_task2.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBempty — camera-ray directions.">
-        <img src="assets/part1/CBempty_task2.png" alt="CBempty — camera-ray directions." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 2.</span> <strong>CBempty — camera-ray directions.</strong> Task 2 debugging output; colors encode direction rather than material or illumination.</figcaption>
-    </figure>
-<figure class="" id="figure-3">
-      <a class="image-link" href="assets/part1/banana.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Banana scene — camera-ray directions.">
-        <img src="assets/part1/banana.png" alt="Banana scene — camera-ray directions." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 3.</span> <strong>Banana scene — camera-ray directions.</strong> The supplied file is a direction visualization, not a normal-shaded banana.</figcaption>
-    </figure>
-<figure class="" id="figure-4">
-      <a class="image-link" href="assets/part1/CBempty_task3.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBempty — triangle intersections.">
-        <img src="assets/part1/CBempty_task3.png" alt="CBempty — triangle intersections." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 4.</span> <strong>CBempty — triangle intersections.</strong> Normal shading reveals the Cornell-box walls and ceiling light geometry.</figcaption>
-    </figure>
-<figure class="" id="figure-5">
-      <a class="image-link" href="assets/part1/CBspheres.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBspheres — triangle and sphere intersections.">
-        <img src="assets/part1/CBspheres.png" alt="CBspheres — triangle and sphere intersections." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 5.</span> <strong>CBspheres — triangle and sphere intersections.</strong> The spheres exhibit smoothly varying normals while the box faces have nearly constant colors.</figcaption>
-    </figure></div>
-<p>Two bugs were especially informative during this stage. Using <code>norm()</code> as though it returned a normalized vector discarded directional information; using <code>normalize()</code> fixed that. Reversing <code>min_t</code> and <code>max_t</code> made the valid interval empty and rejected every intersection. A temporary hit/miss color test separated that visibility problem from a lighting problem.</p>
-</section>
-<section id="part2"><p class="section-label">Part 02</p><h2>Part 2: Bounding Volume Hierarchy</h2>
-<h3>Recursive construction and splitting heuristic</h3>
-<p><code>construct_bvh(start, end, max_leaf_size)</code> operates on a half-open range of primitive pointers. It returns null for an empty range and expands a bounding box around every primitive in the range. If <code>end − start ≤ max_leaf_size</code>, the node becomes a leaf and stores the two iterators. Otherwise, it becomes an internal node with two recursively constructed children.</p>
-<p>The implemented axis rule uses the longest component of <code>bbox.extent</code>, the bounding box of the <em>complete primitives</em>. The split position is the arithmetic mean of the primitive bounding-box centroids on that axis:</p>
+		<br>
 
-<div class="equation" role="group" aria-label="Equation">s = (1/N) ∑<sub>j=1…N</sub> centroid(B<sub>j</sub>)[axis]</div>
-<p><code>std::partition()</code> moves primitives with centroid coordinate smaller than <i>s</i> to the left range and the rest to the right. If the partition leaves one side empty, the fallback is <code>mid = start + N / 2</code>. This splits the current ordering by count and ensures progress for a positive leaf-size limit; it is not a median sort. Although the code also computes <code>centroid_bbox</code>, that box is not used to choose the axis in this implementation. The method is inexpensive and spatially motivated, but it does not guarantee a balanced tree or the minimum possible traversal cost.</p>
-<h3>Bounding-box tests and traversal</h3>
-<p>The slab test asks when a ray lies between the two box planes on each axis. The smaller and larger plane-intersection parameters form an interval for that axis; the three intervals are intersected with the ray's valid interval. There is a box hit only if the resulting entry parameter is no greater than the exit parameter. A direction component of zero must be treated as a parallel-axis case rather than blindly dividing by zero.</p>
+		<strong>Repository:</strong> <a href="https://github.com/cal-cs184-student/hw3-prince">github.com/cal-cs184-student/hw3-prince</a>
 
-<div class="equation" role="group" aria-label="Equation">t<sub>enter</sub> = max(min_t, t<sub>x,near</sub>, t<sub>y,near</sub>, t<sub>z,near</sub>)<br>t<sub>exit</sub> = min(max_t, t<sub>x,far</sub>, t<sub>y,far</sub>, t<sub>z,far</sub>)</div>
-<p>In the supplied traversal code, a failed node-box test immediately discards the entire subtree. At a leaf, the renderer checks the stored primitives. <code>has_intersection()</code> can return on the first hit, which is sufficient for visibility queries. <code>intersect()</code> must instead find the closest hit: it tests the left child and then the right child, using the updated <code>ray.max_t</code> to reject farther candidates. The primitive call appears before the existing hit flag in <code>primitive-&gt;intersect(...) || hit</code>, so an earlier hit does not short-circuit the remaining primitive tests.</p>
-<h3>Large scenes rendered with BVH acceleration</h3>
+		<br>
 
-<div class="gallery cols-3 "><figure class="" id="figure-6">
-      <a class="image-link" href="assets/part2/cow.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Cow.">
-        <img src="assets/part2/cow.png" alt="Cow." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 6.</span> <strong>Cow.</strong> 5,856 primitives; normal shading.</figcaption>
-    </figure>
-<figure class="" id="figure-7">
-      <a class="image-link" href="assets/part2/maxplanck.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Max Planck.">
-        <img src="assets/part2/maxplanck.png" alt="Max Planck." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 7.</span> <strong>Max Planck.</strong> 50,801 primitives; normal shading.</figcaption>
-    </figure>
-<figure class="" id="figure-8">
-      <a class="image-link" href="assets/part2/CBlucy.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBlucy.">
-        <img src="assets/part2/CBlucy.png" alt="CBlucy." width="800" height="600" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 8.</span> <strong>CBlucy.</strong> 133,796 primitives; normal shading.</figcaption>
-    </figure></div>
-<h3>Rendering-time comparison</h3>
-<p>The following values are transcribed from the supplied <code>default_render_speed</code> and <code>optimal_render_speed</code> terminal captures. We report the renderer's <strong>Rendering…100%</strong> duration, not scene-loading time, BVH-construction time, or the runtime of the whole process. All six captures report eight rendering threads.</p>
-<div class="table-wrap"><table><caption>Single-run measurements; speedup = baseline rendering time / BVH rendering time.</caption><thead><tr><th scope="col">Scene</th><th class="num" scope="col">Primitives</th><th class="num" scope="col">Without BVH (s)</th><th class="num" scope="col">With BVH (s)</th><th class="num" scope="col">Observed ratio</th></tr></thead><tbody>
-<tr><th scope="row"><a href="#logs-cow">Cow</a></th><td class="num">5,856</td><td class="num">17.8826</td><td class="num">0.0473</td><td class="num">378.07×</td></tr>
-<tr><th scope="row"><a href="#logs-maxplanck">Max Planck</a></th><td class="num">50,801</td><td class="num">439.6537</td><td class="num">0.0581</td><td class="num">7,567.19×</td></tr>
-<tr><th scope="row"><a href="#logs-lucy">CBlucy</a></th><td class="num">133,796</td><td class="num">738.1741</td><td class="num">0.0483</td><td class="num">15,283.11×</td></tr>
-</tbody></table></div>
-<p>The recorded baseline grows from 17.8826 seconds for Cow to 738.1741 seconds for CBlucy, whereas the accelerated runs remain below 0.06 seconds. This is consistent with BVH pruning: instead of testing a ray against the full primitive collection, the renderer rejects boxes that cannot contain a hit and descends only into relevant subtrees. Scene layout and box overlap also matter, so runtime need not increase monotonically with primitive count. The extra construction cost is small in these logs: the accelerated builds take 0.0024, 0.0216, and 0.0686 seconds, respectively. These are separate from the rendering times used in the ratios.</p>
-<div class="note"><strong>Measurement limitation.</strong> These are ratios of the supplied single runs, not repeated benchmark averages. The paired logs report different traced-ray totals, and not every capture includes the full command line. The screenshots therefore support the recorded timing comparison, but do not independently establish identical ray workloads or explain the counter discrepancy. The raw captures are retained in the evidence appendix.</div>
-</section>
-<section id="part3"><p class="section-label">Part 03</p><h2>Part 3: Direct Illumination</h2>
-<p>Direct illumination evaluates light that travels from a source to one reflecting surface and then to the camera. The diffuse BSDF is <i>ρ/π</i>, where <i>ρ</i> is the RGB reflectance. Directly visible emission is a separate, zero-bounce term.</p>
-<p class="meta">The estimator descriptions in Parts 3–4 follow the assignment's algorithmic specification; the visual comparisons refer to the supplied result images. The report archive does not include the full direct/global-lighting source. <a class="reference" href="#ref-3" aria-label="Assignment reference 3">[3]</a><a class="reference" href="#ref-4" aria-label="Assignment reference 4">[4]</a></p>
-<h3>Uniform-hemisphere estimator</h3>
-<p>At a surface hit, a local frame places the normal along +z. We sample an incoming direction uniformly over that hemisphere, transform it to world space, and trace a ray from the hit point with a small positive lower bound. Only the emission of the first surface reached contributes to this direct-light estimate: a non-emissive blocker contributes zero. In the local frame, the BSDF is evaluated with the incoming and outgoing directions, and the cosine factor is the incoming direction's z component.</p>
+		<h2>Overview</h2>
+		<p>
+			This project connects geometric visibility with light transport. Starting from
+			a pixel on the image plane, the renderer generates camera rays, finds the nearest
+			surface, and estimates the radiance arriving at the camera.
+		</p>
+		<p>
+			Part 1 establishes the camera model and ray–triangle and ray–sphere
+			intersections. Part 2 organizes primitives in a bounding volume hierarchy so
+			that a ray can reject whole groups of geometry. Parts 3 and 4 add diffuse
+			reflection, direct-light estimators, and recursive indirect illumination. Part 5
+			allocates a different number of samples to each pixel according to an estimated
+			convergence criterion.
+		</p>
+		<p style="text-align: center;">
+			<strong>Pixel sample &rarr; Camera ray &rarr; BVH / nearest hit &rarr; Light transport &rarr; Pixel average</strong>
+		</p>
+		<p>
+			The most useful lesson was that correct geometry, efficient traversal, and
+			low-variance sampling solve different problems. BVH acceleration reduces the
+			cost of finding a hit; importance sampling makes lighting samples more useful;
+			adaptive sampling avoids spending the full sample budget on already-stable
+			pixels. Debugging also exposed the importance of small invariants: a direction
+			must be normalized as a vector, the valid ray interval must have its near bound
+			before its far bound, and accumulated color must be averaged only after sampling
+			finishes.
+		</p>
 
-<div class="equation" role="group" aria-label="Equation">L̂<sub>direct</sub> = (1/N) ∑<sub>k=1…N</sub> f<sub>r</sub>(ω<sub>k</sub>, ω<sub>o</sub>) L<sub>e</sub>(y<sub>k</sub>) max(0, cos θ<sub>k</sub>) / p(ω<sub>k</sub>), &nbsp; p = 1/(2π)</div>
-<p>The division by the sampling density and by the sample count is essential: adding more samples should reduce noise rather than increase expected brightness. Uniform directions are often inefficient for a small ceiling light because most directions hit a wall or the object rather than an emitter.</p>
-<h3>Light-importance estimator</h3>
-<p>Light sampling chooses a point or direction on each light directly. A light sample supplies incoming radiance, direction, distance, and a probability density. The direction is converted to the local shading frame; samples below the surface are rejected. A shadow ray tests visibility only up to the sampled light distance, using epsilon bounds so that neither the originating surface nor the light itself is mistaken for a blocker. An unoccluded sample contributes the BSDF times incoming radiance times the cosine, divided by the returned PDF. Samples are averaged for each light, and the per-light estimates are summed. Delta lights need only one sample per shading query.</p>
-<h3>Uniform hemisphere sampling: 1, 4, 16, and 64 light rays</h3>
-<p class="meta">CBbunny, 480 × 360; 1 camera sample per pixel. Labels follow the experiment settings recorded in the original write-up.</p>
+		<figure>
+			<img src="assets/cornell.png" alt="Selected Cornell box rendering results" style="width: 70%;"/>
+		</figure>
 
-<div class="gallery cols-2 "><figure class="" id="figure-9">
-      <a class="image-link" href="assets/part3/hemisphere_1.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Uniform hemisphere — 1 light ray.">
-        <img src="assets/part3/hemisphere_1.png" alt="Uniform hemisphere — 1 light ray." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 9.</span> <strong>Uniform hemisphere — 1 light ray.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-10">
-      <a class="image-link" href="assets/part3/hemisphere_4.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Uniform hemisphere — 4 light rays.">
-        <img src="assets/part3/hemisphere_4.png" alt="Uniform hemisphere — 4 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 10.</span> <strong>Uniform hemisphere — 4 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-11">
-      <a class="image-link" href="assets/part3/hemisphere_16.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Uniform hemisphere — 16 light rays.">
-        <img src="assets/part3/hemisphere_16.png" alt="Uniform hemisphere — 16 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 11.</span> <strong>Uniform hemisphere — 16 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-12">
-      <a class="image-link" href="assets/part3/hemisphere_64.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Uniform hemisphere — 64 light rays.">
-        <img src="assets/part3/hemisphere_64.png" alt="Uniform hemisphere — 64 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 12.</span> <strong>Uniform hemisphere — 64 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure></div>
-<h3>Light importance sampling: soft-shadow comparison</h3>
-<p class="meta">The camera sampling rate stays at 1 sample per pixel while the light-sampling budget changes.</p>
+		<h2>Part 1: Ray Generation and Scene Intersection</h2>
 
-<div class="gallery cols-2 "><figure class="" id="figure-13">
-      <a class="image-link" href="assets/part3/importance_1.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Light importance — 1 light ray.">
-        <img src="assets/part3/importance_1.png" alt="Light importance — 1 light ray." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 13.</span> <strong>Light importance — 1 light ray.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-14">
-      <a class="image-link" href="assets/part3/importance_4.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Light importance — 4 light rays.">
-        <img src="assets/part3/importance_4.png" alt="Light importance — 4 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 14.</span> <strong>Light importance — 4 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-15">
-      <a class="image-link" href="assets/part3/importance_16.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Light importance — 16 light rays.">
-        <img src="assets/part3/importance_16.png" alt="Light importance — 16 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 15.</span> <strong>Light importance — 16 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-16">
-      <a class="image-link" href="assets/part3/importance_64.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Light importance — 64 light rays.">
-        <img src="assets/part3/importance_64.png" alt="Light importance — 64 light rays." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 16.</span> <strong>Light importance — 64 light rays.</strong> 1 sample per pixel.</figcaption>
-    </figure></div>
-<p>With one light sample, the floor near the bunny's contact shadow contains a conspicuous mixture of dark and bright samples: a sampled point on the area light is either visible or blocked. At four samples, the soft-shadow transition is easier to recognize, though the floor and bunny remain grainy. Sixteen samples make the penumbra more continuous, and sixty-four produce the cleanest direct-light result in this sequence. The shadow boundary is especially sensitive because different parts of the area light have different visibility. Increasing <code>-l</code> reduces this lighting uncertainty but does not increase the single camera sample used to resolve a geometric silhouette.</p>
-<p>At the same listed light-sample count, importance sampling is visibly less noisy than uniform-hemisphere sampling. The one-ray hemisphere result is mostly black with isolated bright points because very few directions reach the light. Its 64-ray result still has widespread noise on the walls and floor. By aiming samples at the emitter, light importance sampling spends a much larger fraction of its work on potentially nonzero contributions, so the room is already recognizable at one light sample and becomes smooth much sooner. This is a variance advantage, not a change in the intended lighting model.</p>
+		<h3>Ray generation and pixel sampling</h3>
+		<p>
+			The rendering pipeline begins by generating a camera ray for a sample whose
+			normalized image coordinates are \((x,y)\). I first convert the horizontal
+			and vertical fields of view from degrees to radians and compute the half-width
+			and half-height of the virtual sensor:
+		</p>
+		\[
+			h_w=\tan\left(\frac{\mathrm{hFov}}{2}\right), \qquad
+			h_h=\tan\left(\frac{\mathrm{vFov}}{2}\right).
+		\]
+		<p>
+			The normalized coordinate range \([0,1]^2\) is then mapped to the sensor
+			plane at \(z=-1\). This gives the camera-space direction
+		</p>
+		\[
+			d_c=\big((2x-1)h_w,\ (2y-1)h_h,\ -1\big).
+		\]
+		<p>
+			I rotate this direction into world space with the camera-to-world matrix
+			<code>c2w</code> and normalize it. The resulting ray starts at the world-space
+			camera position <code>pos</code>. I set its valid interval to
+			<code>[nClip, fClip]</code>, so geometry before the near clipping plane or
+			beyond the far clipping plane cannot be reported as visible.
+		</p>
+		<p>
+			For each pixel \((x,y)\), <code>raytrace_pixel</code> draws a 2D sample from
+			<code>gridSampler</code> and adds it to the pixel's lower-left corner. Dividing
+			the resulting position by the image width and height produces the normalized
+			coordinates expected by <code>generate_ray</code>. Each generated ray is traced
+			through the scene, and its returned radiance is accumulated. After all samples
+			used for that pixel have been processed, I divide by the number of samples and
+			store the average in <code>sampleBuffer</code>. Sampling different subpixel
+			positions approximates the integral over the pixel instead of evaluating only
+			its center, which reduces aliasing as the sample count increases.
+		</p>
 
-<figure class="single-figure" id="figure-17">
-      <a class="image-link" href="assets/part3/hemisphere_64_32.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Higher-budget uniform-hemisphere result.">
-        <img src="assets/part3/hemisphere_64_32.png" alt="Higher-budget uniform-hemisphere result." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 17.</span> <strong>Higher-budget uniform-hemisphere result.</strong> 64 camera samples per pixel and 32 light rays, following the original caption. Increasing both budgets reduces the noise, but this image is not an equal-budget comparison with the one-sample-per-pixel series.</figcaption>
-    </figure>
-</section>
-<section id="part4"><p class="section-label">Part 04</p><h2>Part 4: Global Illumination</h2>
-<h3>Indirect-light estimator and recursive paths</h3>
-<p>Indirect illumination allows the next point along a sampled path to be another reflecting surface rather than a light. The diffuse BSDF sampler draws a cosine-weighted local direction with density <i>p(ω) = cos θ / π</i> and returns the BSDF value. After transforming the direction to world space, a secondary ray begins at the hit point with an epsilon lower bound and one less unit of depth. If it reaches another surface, recursive radiance is multiplied by the scattering weight below.</p>
+		<h3>Primitive intersections</h3>
+		<p>
+			A ray is parameterized as \(r(t)=o+td\). Every primitive accepts an
+			intersection only when \(t\) lies between the ray's current
+			<code>min_t</code> and <code>max_t</code>. When a valid hit is found, the
+			primitive replaces <code>max_t</code> with that hit's \(t\). Consequently,
+			later intersection tests automatically reject farther hits, and the final
+			<code>Intersection</code> record contains the closest visible primitive. In
+			addition to \(t\), the record stores the surface normal, a pointer to the
+			primitive, and its BSDF for later shading. The normal-shading images below
+			visualize the normals returned by these intersection routines.
+		</p>
 
-<div class="equation" role="group" aria-label="Equation">L̂<sub>indirect</sub> = f<sub>r</sub>(ω<sub>i</sub>, ω<sub>o</sub>) · L̂<sub>next</sub> · max(0, cos θ<sub>i</sub>) / p(ω<sub>i</sub>)</div>
-<p>For a diffuse surface, the cosine-weighted PDF cancels the cosine in the numerator and the π in <i>ρ/π</i>, leaving the reflectance as the continuation weight before any roulette correction. Accumulated rendering adds the direct-light term at each visited surface, while exact-bounce rendering selects only the requested order of reflection. The camera-ray depth is initialized from <code>max_ray_depth</code>; the recursion reduces that budget rather than resetting it. Directly visible emission is handled as the zero-bounce term, and light paths must not be counted twice through both explicit light sampling and a duplicate emission contribution.</p>
-<h3>Global illumination results</h3>
-<p class="meta">1024 samples per pixel and maximum ray depth 5, as recorded in the image filenames.</p>
+		<h3>Ray–triangle intersection</h3>
+		<p>
+			I implemented the Möller–Trumbore algorithm. For a triangle with vertices
+			\(p_1,p_2,p_3\), I form the edge vectors \(e_1=p_2-p_1\) and
+			\(e_2=p_3-p_1\). I compute
+			\(p=d\times e_2\) and the determinant
+			\(\det=e_1\cdot p\). If \(|\det|&lt;10^{-8}\), the ray is parallel, or
+			nearly parallel, to the triangle plane, so I return no intersection.
+		</p>
+		<p>
+			Otherwise, I use the inverse determinant to solve directly for the
+			barycentric coordinates. With \(s=o-p_1\), the first coordinate is
+			\(u=(s\cdot p)/\det\). Values outside \([0,1]\) lie outside the triangle.
+			Next, I compute \(q=s\times e_1\) and
+			\(v=(d\cdot q)/\det\). The hit is inside the triangle only when
+			\(v\geq0\) and \(u+v\leq1\). Finally,
+			\(t=(e_2\cdot q)/\det\) gives the distance along the ray, which must also lie
+			inside the ray's valid interval.
+		</p>
+		<p>
+			For a valid hit, I update <code>r.max_t</code> and interpolate the three
+			vertex normals using the same barycentric weights:
+		</p>
+		\[
+			n=(1-u-v)n_1+un_2+vn_3.
+		\]
+		<p>
+			I normalize this vector before storing it in the intersection record. Using
+			interpolated vertex normals, rather than one constant face normal, produces
+			smooth normal shading across the triangle mesh.
+		</p>
 
-<div class="gallery cols-2 "><figure class="" id="figure-18">
-      <a class="image-link" href="assets/part4/global/CBspheres_global_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBspheres — global illumination.">
-        <img src="assets/part4/global/CBspheres_global_m5_s1024.png" alt="CBspheres — global illumination." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 18.</span> <strong>CBspheres — global illumination.</strong> 1024 samples per pixel; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-19">
-      <a class="image-link" href="assets/part4/global/CBbunny_global_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBbunny — global illumination.">
-        <img src="assets/part4/global/CBbunny_global_m5_s1024.png" alt="CBbunny — global illumination." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 19.</span> <strong>CBbunny — global illumination.</strong> 1024 samples per pixel; maximum depth 5.</figcaption>
-    </figure></div>
-<p>The ceilings and shadowed object surfaces are no longer uniformly black. The left wall contributes a reddish tint to nearby surfaces, while the blue wall influences the right side of the scene. The bunny's shaded front and the lower parts of the spheres remain visible because light can reach them after reflecting from the floor and walls. The result preserves the contact shadows while adding illumination that a direct-only estimator cannot supply.</p>
-<h3>Direct and indirect illumination</h3>
+		<h3>Ray–sphere intersection</h3>
+		<p>
+			For a sphere with center \(c\) and radius \(R\), I substitute
+			\(r(t)=o+td\) into \(\|r(t)-c\|^2=R^2\). With
+			\(m=o-c\), this produces the quadratic coefficients
+			\(a=d\cdot d\), \(b=2(m\cdot d)\), and
+			\(c_q=m\cdot m-R^2\). A negative discriminant means that the ray misses the
+			sphere. Otherwise, I compute both roots in increasing order and select the
+			nearer root if it lies in the ray interval; if it does not, I try the farther
+			root. This second check is necessary when the ray begins inside the sphere or
+			the nearer crossing is clipped. After updating <code>max_t</code>, I evaluate
+			the hit point \(p=o+td\) and store the outward unit normal
+			\((p-c)/\|p-c\|\) together with the primitive and its BSDF.
+		</p>
 
-<div class="gallery cols-3 "><figure class="" id="figure-20">
-      <a class="image-link" href="assets/part4/lighting/CBbunny_direct_m1_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Direct illumination only.">
-        <img src="assets/part4/lighting/CBbunny_direct_m1_s1024.png" alt="Direct illumination only." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 20.</span> <strong>Direct illumination only.</strong> 1024 samples per pixel; depth 1. The directly visible emitter is retained.</figcaption>
-    </figure>
-<figure class="" id="figure-21">
-      <a class="image-link" href="assets/part4/lighting/CBbunny_indirect_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Indirect illumination only.">
-        <img src="assets/part4/lighting/CBbunny_indirect_m5_s1024.png" alt="Indirect illumination only." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 21.</span> <strong>Indirect illumination only.</strong> 1024 samples per pixel; indirect contributions up to depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-22">
-      <a class="image-link" href="assets/part4/lighting/CBbunny_global_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Direct + indirect illumination.">
-        <img src="assets/part4/lighting/CBbunny_global_m5_s1024.png" alt="Direct + indirect illumination." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 22.</span> <strong>Direct + indirect illumination.</strong> 1024 samples per pixel; maximum depth 5.</figcaption>
-    </figure></div>
-<p>The direct-only view establishes the main form of the bunny, the bright floor, and the shadow cast by the area light. Its ceiling and the bunny's occluded surfaces remain dark. The indirect-only view has a black emitter but shows reflected illumination on the ceiling and the shaded bunny; the red and blue wall influence is particularly apparent there. Combining both components gives bright directly lit surfaces together with softer illumination in occluded regions. These components combine in linear radiance before display mapping, so adding the displayed PNG pixel values is not the appropriate numerical reconstruction test.</p>
-<h3>Exact bounce of light</h3>
-<p>With <code>isAccumBounces = false</code>, each image isolates the requested surface-reflection order. The zero-bounce view contains directly visible emission; higher-order surface contributions show how light is redistributed rather than repeatedly adding the entire lower-depth image.</p>
+		<h3>Ray generation and primitive intersection results</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBempty_task2.png" style="width: 100%;" alt="Camera-ray direction visualization for CBempty"/>
+						<figcaption>CBempty after camera-ray generation and pixel sampling.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBempty_task3.png" style="width: 100%;" alt="Normal-shaded CBempty after triangle intersection"/>
+						<figcaption>CBempty after ray–triangle intersection.</figcaption>
+					</td>
+				</tr>
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part1/banana.png" style="width: 100%;" alt="Normal-shaded banana scene"/>
+						<figcaption>Normal-shaded banana scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part1/CBspheres.png" style="width: 100%;" alt="Normal-shaded Cornell box spheres scene"/>
+						<figcaption>Normal-shaded CBspheres scene.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
 
-<div class="gallery cols-3 "><figure class="" id="figure-23">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m0_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 0.">
-        <img src="assets/part4/bounces/CBbunny_exact_m0_s1024.png" alt="Exact bounce — m = 0." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 23.</span> <strong>Exact bounce — m = 0.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-24">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m1_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 1.">
-        <img src="assets/part4/bounces/CBbunny_exact_m1_s1024.png" alt="Exact bounce — m = 1." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 24.</span> <strong>Exact bounce — m = 1.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-25">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m2_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 2.">
-        <img src="assets/part4/bounces/CBbunny_exact_m2_s1024.png" alt="Exact bounce — m = 2." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 25.</span> <strong>Exact bounce — m = 2.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-26">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m3_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 3.">
-        <img src="assets/part4/bounces/CBbunny_exact_m3_s1024.png" alt="Exact bounce — m = 3." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 26.</span> <strong>Exact bounce — m = 3.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-27">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m4_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 4.">
-        <img src="assets/part4/bounces/CBbunny_exact_m4_s1024.png" alt="Exact bounce — m = 4." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 27.</span> <strong>Exact bounce — m = 4.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-28">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_exact_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Exact bounce — m = 5.">
-        <img src="assets/part4/bounces/CBbunny_exact_m5_s1024.png" alt="Exact bounce — m = 5." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 28.</span> <strong>Exact bounce — m = 5.</strong> 1024 samples per pixel.</figcaption>
-    </figure></div>
-<p>The second-bounce image makes the ceiling and the bunny's previously shadowed side visible. A representative two-reflection path is light → wall or floor → bunny → camera. Because those intermediate surfaces have different reflectances, the reflected illumination carries a color tint. The third-bounce view is dimmer and more diffuse: another reflection spreads light into additional regions but also attenuates it. Fourth- and fifth-order images become progressively weaker. Compared with a basic direct-lit rasterization pipeline, these paths account for interreflection and color bleeding instead of approximating all hidden illumination with a uniform ambient term. Rasterization can incorporate additional global-illumination techniques, but those effects are not supplied by direct shading alone.</p>
-<p class="meta">In the supplied exact m = 1 image, the ceiling emitter remains visible as well as the first-bounce surfaces. That emitter is a zero-bounce display contribution, not an additional first-bounce reflection. In the supplied m ≥ 2 exact-bounce images, the emitter itself is black.</p>
-<h3>Accumulated bounces of light</h3>
-<p>With <code>isAccumBounces = true</code>, the renderer includes all orders up to the depth limit. If <i>L<sup>(k)</sup></i> denotes the contribution of order <i>k</i>, the accumulated result is:</p>
+		<h2>Part 2: Bounding Volume Hierarchy</h2>
 
-<div class="equation" role="group" aria-label="Equation">L<sub>≤m</sub> = ∑<sub>k=0…m</sub> L<sup>(k)</sup></div>
-<div class="gallery cols-3 "><figure class="" id="figure-29">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m0_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 0.">
-        <img src="assets/part4/bounces/CBbunny_accum_m0_s1024.png" alt="Accumulated bounces — m = 0." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 29.</span> <strong>Accumulated bounces — m = 0.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-30">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m1_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 1.">
-        <img src="assets/part4/bounces/CBbunny_accum_m1_s1024.png" alt="Accumulated bounces — m = 1." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 30.</span> <strong>Accumulated bounces — m = 1.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-31">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m2_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 2.">
-        <img src="assets/part4/bounces/CBbunny_accum_m2_s1024.png" alt="Accumulated bounces — m = 2." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 31.</span> <strong>Accumulated bounces — m = 2.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-32">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m3_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 3.">
-        <img src="assets/part4/bounces/CBbunny_accum_m3_s1024.png" alt="Accumulated bounces — m = 3." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 32.</span> <strong>Accumulated bounces — m = 3.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-33">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m4_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 4.">
-        <img src="assets/part4/bounces/CBbunny_accum_m4_s1024.png" alt="Accumulated bounces — m = 4." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 33.</span> <strong>Accumulated bounces — m = 4.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-34">
-      <a class="image-link" href="assets/part4/bounces/CBbunny_accum_m5_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Accumulated bounces — m = 5.">
-        <img src="assets/part4/bounces/CBbunny_accum_m5_s1024.png" alt="Accumulated bounces — m = 5." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 34.</span> <strong>Accumulated bounces — m = 5.</strong> 1024 samples per pixel.</figcaption>
-    </figure></div>
-<div class="table-wrap"><table><thead><tr><th scope="col">Depth</th><th scope="col">Exact-bounce view</th><th scope="col">Accumulated view</th></tr></thead><tbody>
-<tr><th scope="row">0</th><td>Only the emitter is visible.</td><td>The same zero-bounce scene.</td></tr>
-<tr><th scope="row">1</th><td>Directly lit surfaces; visible emission is also retained in this supplied image.</td><td>Emission and direct lighting establish the room and bunny.</td></tr>
-<tr><th scope="row">2</th><td>A strong first indirect component lights shaded surfaces.</td><td>The bunny and ceiling brighten substantially.</td></tr>
-<tr><th scope="row">3</th><td>A weaker, more distributed indirect contribution.</td><td>Shadows fill further and reflected wall color becomes richer.</td></tr>
-<tr><th scope="row">4–5</th><td>Each isolated higher-order contribution is comparatively dim.</td><td>Smaller refinements approach the depth-limited global result.</td></tr>
-</tbody></table></div>
-<p>The accumulated images approach a stable appearance because each additional reflection contributes a smaller amount of energy for these diffuse materials. The exact-bounce sequence becomes darker for the same reason. Finite Monte Carlo noise means individual pixels need not change perfectly monotonically even when the expected accumulated energy increases.</p>
-<h3>Russian Roulette termination</h3>
-<p>Russian Roulette avoids tracing every eligible path to its maximum depth. If a path survives with probability <i>q</i>, its continuation contribution is divided by <i>q</i>; otherwise, that continuation contributes zero. The expected continuation is preserved because <i>q × (L/q) + (1 − q) × 0 = L</i>. This corrects the random termination itself; a finite maximum depth still omits contributions beyond that cap.</p>
+		<h3>BVH construction</h3>
+		<p>
+			I construct the BVH recursively over a range of pointers in the shared
+			primitive vector. At the beginning of each call, I expand one bounding box
+			to contain the bounding boxes of every primitive in the current range. This
+			box becomes the bounding volume stored in the new node. If the range contains
+			no more than <code>max_leaf_size</code> primitives, the node becomes a leaf:
+			I store its <code>start</code> and <code>end</code> iterators and stop the
+			recursion. With the default configuration, each leaf contains at most four
+			primitives.
+		</p>
+		<p>
+			For an interior node, I choose the split axis from the largest component of
+			the node bounding box's extent. Splitting along the longest spatial direction
+			usually separates the primitives more effectively and avoids creating boxes
+			that are unnecessarily elongated. I then compute the centroid of every
+			primitive's bounding box and take the average centroid coordinate along the
+			selected axis as the split point. A call to <code>std::partition</code> places
+			primitives whose centroid is below this value on the left and the remaining
+			primitives on the right.
+		</p>
+		<p>
+			A centroid split can be degenerate when every primitive falls on the same
+			side, for example when many centroids have the same coordinate. In that case,
+			<code>mid</code> would equal <code>start</code> or <code>end</code>, and
+			recursing on the unchanged range would never reach the leaf condition. I avoid
+			this by falling back to the iterator midpoint
+			<code>start + (end - start) / 2</code>. This guarantees two nonempty,
+			smaller ranges and therefore guarantees that construction terminates. Finally,
+			I recursively build the left and right children from the two ranges.
+		</p>
 
-<div class="gallery cols-3 "><figure class="" id="figure-35">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m0_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 0.">
-        <img src="assets/part4/roulette/CBbunny_rr_m0_s1024.png" alt="Russian Roulette — m = 0." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 35.</span> <strong>Russian Roulette — m = 0.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-36">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m1_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 1.">
-        <img src="assets/part4/roulette/CBbunny_rr_m1_s1024.png" alt="Russian Roulette — m = 1." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 36.</span> <strong>Russian Roulette — m = 1.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-37">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m2_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 2.">
-        <img src="assets/part4/roulette/CBbunny_rr_m2_s1024.png" alt="Russian Roulette — m = 2." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 37.</span> <strong>Russian Roulette — m = 2.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-38">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m3_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 3.">
-        <img src="assets/part4/roulette/CBbunny_rr_m3_s1024.png" alt="Russian Roulette — m = 3." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 38.</span> <strong>Russian Roulette — m = 3.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-39">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m4_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 4.">
-        <img src="assets/part4/roulette/CBbunny_rr_m4_s1024.png" alt="Russian Roulette — m = 4." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 39.</span> <strong>Russian Roulette — m = 4.</strong> 1024 samples per pixel.</figcaption>
-    </figure>
-<figure class="" id="figure-40">
-      <a class="image-link" href="assets/part4/roulette/CBbunny_rr_m100_s1024.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Russian Roulette — m = 100.">
-        <img src="assets/part4/roulette/CBbunny_rr_m100_s1024.png" alt="Russian Roulette — m = 100." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 40.</span> <strong>Russian Roulette — m = 100.</strong> 1024 samples per pixel.</figcaption>
-    </figure></div>
-<p>The m = 0 and m = 1 results show emission and direct lighting, respectively. At m = 2, indirect illumination produces the largest visual change. Increasing the limit to 3 and 4 refines the shaded bunny and the ceiling. The m = 100 image has a similar overall appearance to the lower-depth global images, with the remaining high-order illumination included more fully. A limit of 100 does not imply that every camera sample traces 100 reflections: many paths terminate earlier through roulette.</p>
-<h3>Samples per pixel</h3>
-<p class="meta">CBbunny; 4 light rays per light; maximum depth 5. The sample counts and other settings are encoded in the filenames.</p>
+		<h3>Ray–bounding-box intersection</h3>
+		<p>
+			I use the slab method to intersect a ray with an axis-aligned bounding box.
+			The candidate interval initially equals the input ray interval. For each of
+			the x, y, and z axes, I compute the ray parameters at which the
+			ray crosses the two planes that bound that axis and swap them when necessary
+			so that the smaller value is the entry time. I update the overall entry time
+			with the maximum of the three per-axis entries and the exit time with the
+			minimum of the per-axis exits. If the entry ever becomes greater than the
+			exit, the three slab intervals have no common overlap, so the ray misses the
+			box.
+		</p>
+		<p>
+			I handle a nearly parallel ray direction separately using an epsilon of
+			<code>1e-12</code>. If the ray is parallel to an axis and its origin lies
+			outside that axis's slab, there can be no intersection. If the origin lies
+			inside the slab, that axis imposes no additional restriction. When all three
+			axes succeed, I return the clipped entry and exit values through
+			<code>t0</code> and <code>t1</code>.
+		</p>
 
-<div class="gallery cols-3 "><figure class="" id="figure-41">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0001_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 1 sample per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0001_l4_m5.png" alt="1 sample per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 41.</span> <strong>1 sample per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-42">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0002_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 2 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0002_l4_m5.png" alt="2 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 42.</span> <strong>2 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-43">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0004_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 4 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0004_l4_m5.png" alt="4 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 43.</span> <strong>4 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-44">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0008_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 8 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0008_l4_m5.png" alt="8 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 44.</span> <strong>8 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-45">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0016_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 16 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0016_l4_m5.png" alt="16 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 45.</span> <strong>16 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-46">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp0064_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 64 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp0064_l4_m5.png" alt="64 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 46.</span> <strong>64 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure>
-<figure class="" id="figure-47">
-      <a class="image-link" href="assets/part4/samples/CBbunny_spp1024_l4_m5.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: 1024 samples per pixel.">
-        <img src="assets/part4/samples/CBbunny_spp1024_l4_m5.png" alt="1024 samples per pixel." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 47.</span> <strong>1024 samples per pixel.</strong> 4 light rays; maximum depth 5.</figcaption>
-    </figure></div>
-<p>At 1–4 samples per pixel, the walls, ceiling, and bunny all contain strong grain. At 8 and 16 samples, the main lighting structure is stable but mottling remains on shaded surfaces. Sixty-four samples make the image noticeably smoother, and 1024 provide the cleanest view in this series. The occluded bunny, contact-shadow region, and ceiling converge more slowly than bright, directly illuminated surfaces because their estimates depend more heavily on variable indirect paths. More samples average those fluctuations; they do not add a new lighting effect or increase the maximum number of reflections.</p>
-</section>
-<section id="part5"><p class="section-label">Part 05</p><h2>Part 5: Adaptive Sampling</h2>
-<h3>Per-pixel convergence test</h3>
-<p>Fixed-rate sampling spends the same number of camera samples on every pixel, even when some estimates stabilize much earlier. The adaptive version keeps <code>ns_aa</code> as an upper bound and stops an individual pixel when its luminance estimate passes a relative-uncertainty test. The RGB sum still determines the final pixel color; luminance is used only to decide when to stop.</p>
-<p>For each new radiance sample, <code>illum()</code> produces a scalar <i>x<sub>k</sub></i>. We update the running sums <i>s₁</i> and <i>s₂</i> and increment the actual sample count <i>n</i>. Storing two sums avoids retaining the full sample history. The mean and sample variance are:</p>
+		<h3>BVH traversal</h3>
+		<p>
+			Both traversal functions begin by intersecting the ray with the current
+			node's bounding box, using the ray's current <code>min_t</code> and
+			<code>max_t</code> as the valid interval. A missed box rejects the entire
+			subtree without testing any of its primitives. At a leaf,
+			<code>has_intersection</code> tests primitives one at a time and returns
+			immediately after the first hit. At an interior node it similarly searches
+			the left child first and visits the right child only if the left subtree
+			contains no hit. This short circuit is valid because this function only asks
+			whether any intersection exists.
+		</p>
+		<p>
+			The full <code>intersect</code> function must instead find the closest hit.
+			It tests every primitive in an intersected leaf and recursively considers
+			both children. Each successful primitive test reduces the ray's mutable
+			<code>max_t</code> to the new closest distance. Later primitive and bounding-box
+			tests therefore reject anything farther away, while a closer hit can still
+			update the shared <code>Intersection</code> record. The function returns the
+			logical OR of the child results, indicating whether either subtree produced a
+			valid hit.
+		</p>
 
-<div class="equation" role="group" aria-label="Equation">s<sub>1</sub> = ∑ x<sub>k</sub>, &nbsp; s<sub>2</sub> = ∑ x<sub>k</sub><sup>2</sup><br>μ = s<sub>1</sub> / n, &nbsp; σ<sup>2</sup> = max(0, (s<sub>2</sub> − s<sub>1</sub><sup>2</sup>/n) / (n − 1))</div>
-<p>After every <code>samplesPerBatch</code> samples, provided <i>n &gt; 1</i>, we compute the normal-approximation 95% confidence-interval half-width and compare it with a tolerance relative to the mean:</p>
+		<h3>Large scenes rendered with BVH acceleration</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part2/cow.png" style="width: 100%;" alt="Normal-shaded cow scene"/>
+						<figcaption>Normal-shaded cow scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part2/maxplanck.png" style="width: 100%;" alt="Normal-shaded Max Planck scene"/>
+						<figcaption>Normal-shaded Max Planck scene.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part2/CBlucy.png" style="width: 100%;" alt="Normal-shaded Cornell box Lucy scene"/>
+						<figcaption>Normal-shaded CBlucy scene.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
 
-<div class="equation" role="group" aria-label="Equation">I = 1.96 √(σ<sup>2</sup>/n), &nbsp;&nbsp; stop when I ≤ maxTolerance · μ</div>
-<p>Clamping the estimated variance to zero prevents a tiny negative round-off result from entering the square root. The comparison must use <code>maxTolerance * mean</code>, not just <code>maxTolerance</code>, because the criterion is relative rather than absolute. When sampling stops, we divide the accumulated RGB value by <i>n</i> exactly once and write <i>n</i> to <code>sampleCountBuffer</code>. A fixed-rate comparison branch uses the same ray-generation and depth-initialization logic but takes all <code>ns_aa</code> samples. This statistical test is a practical stopping heuristic, not a proof that every pixel has reached a guaranteed error bound.</p>
-<h3>Render configuration and image pairs</h3>
-<p>The two scenes below each have a final rendering and its corresponding sampling-rate visualization. Both images in a pair come from adaptive rendering; the heatmap is not a separate non-adaptive render. Red indicates high sample usage relative to the configured maximum, blue indicates low usage, and intermediate colors show intermediate rates. <a class="reference" href="#ref-5" aria-label="Assignment reference 5">[5]</a></p>
-<div class="table-wrap"><table><caption>Reproduction settings recorded for the Part 5 experiment.</caption><thead><tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">Meaning</th></tr></thead><tbody>
-<tr><th scope="row">Maximum camera samples</th><td><code>-s 2048</code></td><td>A cap per pixel, not a requirement to use all 2048 samples.</td></tr>
-<tr><th scope="row">Adaptive check</th><td><code>-a 64 0.05</code></td><td>Check every 64 samples using a 5% relative tolerance.</td></tr>
-<tr><th scope="row">Light samples</th><td><code>-l 1</code></td><td>One sample per light at each direct-light query.</td></tr>
-<tr><th scope="row">Maximum depth</th><td><code>-m 5</code></td><td>Depth budget for recursive light transport.</td></tr>
-<tr><th scope="row">Resolution / threads</th><td><code>-r 480 360 -t 8</code></td><td>480 × 360 output with eight rendering threads.</td></tr>
-</tbody></table></div>
-<p class="meta">These are the command settings documented for the experiment. The supplied PNGs verify the image size but do not embed the sample, tolerance, or depth settings; separate Part 5 command logs were not included in the archive.</p>
-<div class="legend" aria-label="Sampling-rate color legend"><span>Low sample use</span><span class="legend-bar" aria-hidden="true"></span><span>High sample use</span></div>
-<h3>Scene 1: CBbunny</h3>
+		<h3>Rendering-time comparison</h3>
+		<p>
+			I rendered all three scenes at 800 by 600 resolution using eight threads.
+			The “without BVH” runs used the original single-leaf hierarchy, while the
+			“with BVH” runs used my recursive BVH implementation.
+		</p>
+		<table style="width: 100%; border-collapse: collapse; text-align: left;">
+			<tr>
+				<th style="border: 1px solid #aaa; padding: 8px;">Scene</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">Without BVH</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">With BVH</th>
+				<th style="border: 1px solid #aaa; padding: 8px;">Speedup</th>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">Cow</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">3.6596 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">0.0438 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">83.55&times;</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">Max Planck</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">34.6341 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">0.0498 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">695.46&times;</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid #aaa; padding: 8px;">CBlucy</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">119.8712 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">0.0447 s</td>
+				<td style="border: 1px solid #aaa; padding: 8px;">2681.68&times;</td>
+			</tr>
+		</table>
+		<p>
+			The speedup increases substantially with scene complexity. Cow contains 5,856
+			primitives and became 83.55 times faster, Max Planck contains 50,801 primitives
+			and became 695.46 times faster, and CBlucy contains 133,796 primitives and
+			became 2681.68 times faster. The average number of primitive intersection tests
+			per ray fell from 622.50 to 2.35 for Cow, from 6986.24 to 2.95 for Max Planck,
+			and from 36708.99 to 2.61 for CBlucy. Without acceleration, a ray is tested
+			against every primitive in the single leaf, so the work grows linearly with the
+			scene size. The recursive BVH instead rejects large groups of primitives after
+			only a few inexpensive bounding-box tests. This explains why the most complex
+			scene receives the largest speedup.
+		</p>
 
-<div class="gallery cols-2 "><figure class="" id="figure-48">
-      <a class="image-link" href="assets/part5/bunny.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBbunny — adaptive rendering.">
-        <img src="assets/part5/bunny.png" alt="CBbunny — adaptive rendering." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 48.</span> <strong>CBbunny — adaptive rendering.</strong> The final image is smooth overall, including the bunny and its contact shadow.</figcaption>
-    </figure>
-<figure class="" id="figure-49">
-      <a class="image-link" href="assets/part5/bunny_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBbunny — sampling rate.">
-        <img src="assets/part5/bunny_rate.png" alt="CBbunny — sampling rate." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 49.</span> <strong>CBbunny — sampling rate.</strong> The heatmap belongs to the rendering on the left; it is not a lighting image.</figcaption>
-    </figure></div>
-<p>The back wall and much of the floor are blue, indicating that their estimates stabilized before exhausting the sample budget. Large parts of the bunny, the region near its contact shadow, and the ceiling are red or yellow. Those regions combine occlusion and indirect illumination, which produce more variable path contributions. The directly visible rectangular emitter is blue even though it is bright: stable emission can converge quickly. Thus the sampling pattern follows variance relative to mean brightness, not simply which surfaces are brightest or darkest.</p>
-<h3>Scene 2: CBspheres</h3>
+		<h2>Part 3: Direct Illumination</h2>
 
-<div class="gallery cols-2 "><figure class="" id="figure-50">
-      <a class="image-link" href="assets/part5/spheres.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBspheres — adaptive rendering.">
-        <img src="assets/part5/spheres.png" alt="CBspheres — adaptive rendering." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 50.</span> <strong>CBspheres — adaptive rendering.</strong> Final lighting result for the two-sphere scene.</figcaption>
-    </figure>
-<figure class="" id="figure-51">
-      <a class="image-link" href="assets/part5/spheres_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBspheres — sampling rate.">
-        <img src="assets/part5/spheres_rate.png" alt="CBspheres — sampling rate." width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 51.</span> <strong>CBspheres — sampling rate.</strong> High sample use appears on shadowed sphere regions and near the floor contacts.</figcaption>
-    </figure></div>
-<p>The upper, directly illuminated parts of the spheres use fewer samples than their shadowed lower regions. The right sphere has a broad red region facing the camera, and the contact-shadow areas on the floor also demand many samples. As in the bunny scene, the ceiling requires a higher sampling budget while the central back wall is mostly blue. Compared with the bunny's irregular red pattern, the smooth sphere geometry produces broader, more continuous bands of sample usage. Both pairs show why one fixed rate is inefficient: large smooth regions converge early while occluded surfaces continue sampling. No precise time saving is claimed here because a matched fixed-rate timing experiment is not included.</p>
-<details><summary>Commands for reproducing the Part 5 renders</summary>
-<pre><code>./pathtracer -t 8 -s 2048 -a 64 0.05 -l 1 -m 5 -r 480 360 -f bunny.png ../dae/sky/CBbunny.dae
+		<h3>Diffuse BSDF and emitted radiance</h3>
+		<p>
+			For a Lambertian surface, my <code>DiffuseBSDF::f</code> returns the
+			reflectance divided by \(\pi\). The value is independent of the incoming
+			and outgoing directions because an ideal diffuse material scatters light
+			equally in every direction:
+		</p>
+		\[
+			f_r(\omega_o,\omega_i)=\frac{\rho}{\pi}.
+		\]
+		<p>
+			<code>DiffuseBSDF::sample_f</code> uses the provided cosine-weighted
+			hemisphere sampler to generate an incoming direction and its PDF, then returns
+			the same Lambertian BSDF value. For zero-bounce illumination, I directly return
+			<code>isect.bsdf-&gt;get_emission()</code>. Therefore, a camera ray that directly
+			hits a light sees its emitted radiance, while an ordinary diffuse surface
+			contributes zero at bounce zero. <code>one_bounce_radiance</code> selects one of
+			the following two direct-lighting estimators according to
+			<code>direct_hemisphere_sample</code>.
+		</p>
 
-./pathtracer -t 8 -s 2048 -a 64 0.05 -l 1 -m 5 -r 480 360 -f spheres.png ../dae/sky/CBspheres_lambertian.dae</code></pre>
-<p class="meta">Executable and scene paths depend on the working directory. The two outputs per run are the named PNG and its <code>_rate.png</code> partner.</p>
-</details>
-</section>
-<section id="collaboration"><p class="section-label">Working together</p><h2>Partner Collaboration</h2>
-<p>We coordinated the project through separate Git branches. The work on Parts 3 and 4 was integrated from <code>dai</code> into <code>prince</code>, alongside the ray-generation, intersection, acceleration, and adaptive-sampling work. The shared <code>pathtracer.cpp</code> made the interfaces between tasks important: the pixel loop had to preserve the adaptive sample count and initialize the depth consumed by the lighting recursion. The integration and debugging process highlighted that a successful text merge does not by itself verify rendering behavior. Intermediate direction, hit/miss, and normal-shading outputs helped separate problems in camera rays and geometry from problems in light transport.</p>
-</section>
-<section id="ai"><p class="section-label">Disclosure</p><h2>Acknowledgement of AI</h2>
-<p>We used ChatGPT for conceptual explanations, C++ implementation suggestions, code review, debugging, Git workflow guidance, and help interpreting the write-up requirements. Assistance covered camera-ray normalization and clipping bounds, triangle and sphere intersections, BVH construction and traversal concepts, and the adaptive-sampling statistics and stopping condition. ChatGPT also helped draft and edit this report, match supplied images with captions, and transcribe timing data from the supplied terminal captures. The illustrations and render results shown here were supplied as project assets; AI did not generate replacement rendering results or run the path tracer to produce new experimental measurements.</p>
-</section>
-<section id="evidence"><p class="section-label">Evidence appendix</p><h2>Recorded Outputs and Supporting Files</h2>
-<p>The captures below are retained as evidence for the Part 2 timing table. They are terminal records, not substitutes for the renderer-exported scene images above. Click any image in the report to view the original file at its native resolution.</p>
+		<h3>Uniform hemisphere sampling implementation</h3>
+		<p>
+			At the hit point, I construct an orthonormal coordinate frame whose local
+			z-axis is aligned with the surface normal. I transform the outgoing direction
+			<code>-r.d</code> into this local frame because the BSDF and cosine term are
+			evaluated in local coordinates. The number of hemisphere samples is the number
+			of scene lights multiplied by <code>ns_area_light</code>. For the area-light
+			scene shown below, this matches the total number of samples used by light
+			sampling and makes the comparison fair.
+		</p>
+		<p>
+			For every sample, <code>hemisphereSampler</code> draws a direction uniformly
+			from the local upper hemisphere, whose PDF is \(1/(2\pi)\). I transform the
+			direction to world space and cast a ray from the hit point with
+			<code>min_t = EPS_F</code> to avoid immediately intersecting the original
+			surface. If the ray hits the scene, I obtain the emitted radiance
+			\(L_i\) from the first surface it reaches. A non-emissive hit contributes
+			zero. For an emissive hit, the Monte Carlo contribution is
+		</p>
+		\[
+			\frac{f_r(\omega_o,\omega_i)L_i\cos\theta_i}{p(\omega_i)}
+			=2\pi f_r(\omega_o,\omega_i)L_i\,\omega_i.z.
+		\]
+		<p>
+			I sum these contributions and divide by the total number of samples. This
+			estimator is unbiased, but it has high variance when the light occupies only a
+			small solid angle because most uniformly sampled directions do not reach an
+			emissive surface.
+		</p>
 
-<details id="logs-cow" class="logs"><summary>Cow: baseline and BVH timing captures</summary>
-<figure class="" id="figure-52">
-      <a class="image-link" href="assets/part2/cow_default_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Cow — baseline timing log.">
-        <img src="assets/part2/cow_default_render_speed.png" alt="Cow — baseline timing log." width="1701" height="568" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 52.</span> <strong>Cow — baseline timing log.</strong> Rendering: 17.8826 s. Construction: 0.0001 s. Original file: <code>cow_default_render_speed.png</code>.</figcaption>
-    </figure>
-<figure class="" id="figure-53">
-      <a class="image-link" href="assets/part2/cow_optimal_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Cow — accelerated timing log.">
-        <img src="assets/part2/cow_optimal_render_speed.png" alt="Cow — accelerated timing log." width="1702" height="619" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 53.</span> <strong>Cow — accelerated timing log.</strong> Rendering: 0.0473 s. Construction: 0.0024 s. Original file: <code>cow_optimal_render_speed.png</code>.</figcaption>
-    </figure>
-</details>
-<details id="logs-maxplanck" class="logs"><summary>Max Planck: baseline and BVH timing captures</summary>
-<figure class="" id="figure-54">
-      <a class="image-link" href="assets/part2/maxplanck_default_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Max Planck — baseline timing log.">
-        <img src="assets/part2/maxplanck_default_render_speed.png" alt="Max Planck — baseline timing log." width="1690" height="624" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 54.</span> <strong>Max Planck — baseline timing log.</strong> Rendering: 439.6537 s. Construction: 0.0017 s. Original file: <code>maxplanck_default_render_speed.png</code>.</figcaption>
-    </figure>
-<figure class="" id="figure-55">
-      <a class="image-link" href="assets/part2/maxPlanck_optimal_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: Max Planck — accelerated timing log.">
-        <img src="assets/part2/maxPlanck_optimal_render_speed.png" alt="Max Planck — accelerated timing log." width="1387" height="288" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 55.</span> <strong>Max Planck — accelerated timing log.</strong> Rendering: 0.0581 s. Construction: 0.0216 s. Original file: <code>maxPlanck_optimal_render_speed.png</code>.</figcaption>
-    </figure>
-</details>
-<details id="logs-lucy" class="logs"><summary>CBlucy: baseline and BVH timing captures</summary>
-<figure class="" id="figure-56">
-      <a class="image-link" href="assets/part2/CBlucy_default_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBlucy — baseline timing log.">
-        <img src="assets/part2/CBlucy_default_render_speed.png" alt="CBlucy — baseline timing log." width="1308" height="289" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 56.</span> <strong>CBlucy — baseline timing log.</strong> Rendering: 738.1741 s. Construction: 0.0036 s. Original file: <code>CBlucy_default_render_speed.png</code>.</figcaption>
-    </figure>
-<figure class="" id="figure-57">
-      <a class="image-link" href="assets/part2/CBlucy_optimal_render_speed.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: CBlucy — accelerated timing log.">
-        <img src="assets/part2/CBlucy_optimal_render_speed.png" alt="CBlucy — accelerated timing log." width="1345" height="289" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 57.</span> <strong>CBlucy — accelerated timing log.</strong> Rendering: 0.0483 s. Construction: 0.0686 s. Original file: <code>CBlucy_optimal_render_speed.png</code>.</figcaption>
-    </figure>
-</details>
-<details id="fixed-rate-diagnostics"><summary>Part 3 sampling-rate diagnostics</summary>
-<p>All nine supplied Part 3 rate maps are uniformly red. They indicate full reported sample usage in those output buffers and contain no spatially varying adaptive pattern. They are paired below with their corresponding render filenames and are kept separate from the Part 5 convergence results.</p>
-<div class="gallery cols-3 diagnostics"><figure class="" id="figure-58">
-      <a class="image-link" href="assets/part3/hemisphere_1_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: hemisphere_1_rate.png">
-        <img src="assets/part3/hemisphere_1_rate.png" alt="hemisphere_1_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 58.</span> <strong>hemisphere_1_rate.png</strong> Rate-map partner of <a href="assets/part3/hemisphere_1.png"><code>hemisphere_1.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-59">
-      <a class="image-link" href="assets/part3/hemisphere_4_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: hemisphere_4_rate.png">
-        <img src="assets/part3/hemisphere_4_rate.png" alt="hemisphere_4_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 59.</span> <strong>hemisphere_4_rate.png</strong> Rate-map partner of <a href="assets/part3/hemisphere_4.png"><code>hemisphere_4.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-60">
-      <a class="image-link" href="assets/part3/hemisphere_16_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: hemisphere_16_rate.png">
-        <img src="assets/part3/hemisphere_16_rate.png" alt="hemisphere_16_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 60.</span> <strong>hemisphere_16_rate.png</strong> Rate-map partner of <a href="assets/part3/hemisphere_16.png"><code>hemisphere_16.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-61">
-      <a class="image-link" href="assets/part3/hemisphere_64_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: hemisphere_64_rate.png">
-        <img src="assets/part3/hemisphere_64_rate.png" alt="hemisphere_64_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 61.</span> <strong>hemisphere_64_rate.png</strong> Rate-map partner of <a href="assets/part3/hemisphere_64.png"><code>hemisphere_64.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-62">
-      <a class="image-link" href="assets/part3/hemisphere_64_32_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: hemisphere_64_32_rate.png">
-        <img src="assets/part3/hemisphere_64_32_rate.png" alt="hemisphere_64_32_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 62.</span> <strong>hemisphere_64_32_rate.png</strong> Rate-map partner of <a href="assets/part3/hemisphere_64_32.png"><code>hemisphere_64_32.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-63">
-      <a class="image-link" href="assets/part3/importance_1_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: importance_1_rate.png">
-        <img src="assets/part3/importance_1_rate.png" alt="importance_1_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 63.</span> <strong>importance_1_rate.png</strong> Rate-map partner of <a href="assets/part3/importance_1.png"><code>importance_1.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-64">
-      <a class="image-link" href="assets/part3/importance_4_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: importance_4_rate.png">
-        <img src="assets/part3/importance_4_rate.png" alt="importance_4_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 64.</span> <strong>importance_4_rate.png</strong> Rate-map partner of <a href="assets/part3/importance_4.png"><code>importance_4.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-65">
-      <a class="image-link" href="assets/part3/importance_16_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: importance_16_rate.png">
-        <img src="assets/part3/importance_16_rate.png" alt="importance_16_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 65.</span> <strong>importance_16_rate.png</strong> Rate-map partner of <a href="assets/part3/importance_16.png"><code>importance_16.png</code></a>.</figcaption>
-    </figure>
-<figure class="" id="figure-66">
-      <a class="image-link" href="assets/part3/importance_64_rate.png" target="_blank" rel="noopener" aria-label="Open full-resolution image: importance_64_rate.png">
-        <img src="assets/part3/importance_64_rate.png" alt="importance_64_rate.png" width="480" height="360" decoding="async">
-      </a>
-      <figcaption><span class="figure-number">Figure 66.</span> <strong>importance_64_rate.png</strong> Rate-map partner of <a href="assets/part3/importance_64.png"><code>importance_64.png</code></a>.</figcaption>
-    </figure></div>
-</details>
-</section>
-<section id="references"><p class="section-label">Course references</p><h2>References and Report Scope</h2>
-<p class="meta">The report follows the original Parts 1–5 structure. The implementation-specific BVH description is based on the supplied <code>bvh.cpp</code>; camera, primitive, and adaptive-sampling explanations also use the code discussed during development. Scene observations and timings come from the supplied project images. No extra-credit implementation is claimed in this report.</p>
-<div class="references">
-<p id="ref-1">[1] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/part1/">Part 1: Ray Generation and Scene Intersection</a>.</p>
-<p id="ref-2">[2] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/part2/">Part 2: Bounding Volume Hierarchy</a>.</p>
-<p id="ref-3">[3] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/part3/">Part 3: Direct Illumination</a>.</p>
-<p id="ref-4">[4] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/part4/">Part 4: Global Illumination</a>.</p>
-<p id="ref-5">[5] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/part5/">Part 5: Adaptive Sampling</a>.</p>
-<p id="ref-6">[6] CS184/284A. <a href="https://cs184.eecs.berkeley.edu/fa26/hw/hw3/deliverables/">Homework 3 Deliverables and Write-Up Rubric</a>.</p>
-</div>
-</section>
-</main>
-<footer><div class="container">CS184/284A · Fall 2026 · Homework 3 · Dongyang Dai and Zihan Wang<br>Original PNG assets are preserved. This page uses local assets and browser-native text, so no external font or equation-rendering download is required.</div></footer>
-<script>
-// Expand supporting evidence for printing, then restore the reader's view.
-let previousDetailsState = [];
-window.addEventListener('beforeprint', () => {
-  previousDetailsState = Array.from(document.querySelectorAll('details'), d => [d, d.open]);
-  previousDetailsState.forEach(([d]) => { d.open = true; });
-});
-window.addEventListener('afterprint', () => {
-  previousDetailsState.forEach(([d, open]) => { d.open = open; });
-});
-// Reveal a collapsed evidence panel when following an in-page table link.
-function revealHash() {
-  const id = decodeURIComponent(location.hash.slice(1));
-  if (!id) return;
-  const target = document.getElementById(id);
-  if (target && target.tagName === 'DETAILS') target.open = true;
-}
-window.addEventListener('hashchange', revealHash);
-revealHash();
-</script>
-</body></html>
+		<h3>Light importance sampling implementation</h3>
+		<p>
+			The importance-sampling estimator loops over every light rather than drawing
+			arbitrary hemisphere directions. It takes one sample from a delta light and
+			<code>ns_area_light</code> samples from each area light. Calling
+			<code>light-&gt;sample_L</code> returns the incident radiance, a world-space
+			direction toward the sampled light point, the distance to that point, and the
+			corresponding PDF. I transform the direction into the local shading frame and
+			reject invalid PDFs, directions below the surface, and samples whose light
+			distance is too small.
+		</p>
+		<p>
+			To test visibility, I cast a shadow ray from <code>EPS_F</code> to
+			<code>d_light - EPS_F</code>. If the BVH reports any intersection in this
+			interval, another surface blocks the light and the sample contributes nothing.
+			Otherwise, I add
+		</p>
+		\[
+			\frac{f_r(\omega_o,\omega_i)L_i\cos\theta_i}{p(\omega_i)}
+		\]
+		<p>
+			to that light's running sum. I average the samples for each light separately
+			and then add the results from all lights. Since every generated direction aims
+			at a light, many more samples carry useful energy than in uniform hemisphere
+			sampling.
+		</p>
+
+		<h3>Uniform hemisphere sampling results</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_1.png" style="width: 100%;" alt="Uniform hemisphere sampling with 1 light ray"/>
+						<figcaption>1 light ray.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_4.png" style="width: 100%;" alt="Uniform hemisphere sampling with 4 light rays"/>
+						<figcaption>4 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_16.png" style="width: 100%;" alt="Uniform hemisphere sampling with 16 light rays"/>
+						<figcaption>16 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/hemisphere_64.png" style="width: 100%;" alt="Uniform hemisphere sampling with 64 light rays"/>
+						<figcaption>64 light rays.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<h3>Light importance sampling results</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_1.png" style="width: 100%;" alt="Light importance sampling with 1 light ray"/>
+						<figcaption>1 light ray.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_4.png" style="width: 100%;" alt="Light importance sampling with 4 light rays"/>
+						<figcaption>4 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_16.png" style="width: 100%;" alt="Light importance sampling with 16 light rays"/>
+						<figcaption>16 light rays.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part3/importance_64.png" style="width: 100%;" alt="Light importance sampling with 64 light rays"/>
+						<figcaption>64 light rays.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<h3>Noise comparison</h3>
+		<p>
+			For the light-sampling sequence, I kept the camera sampling rate at one sample
+			per pixel and varied the number of light rays. With one light ray, the scene is
+			already recognizable, but the bunny and the floor around its shadow contain
+			strong speckled noise. At four light rays, the large bright surfaces become
+			more stable, although the soft-shadow boundary is still irregular. Sixteen
+			light rays make the penumbra and the bunny's shading substantially smoother.
+			At 64 light rays, the wall illumination is nearly uniform and the soft shadow
+			under the bunny is much cleaner, with only small residual Monte Carlo noise in
+			high-variance and high-contrast regions.
+		</p>
+		<p>
+			The difference between the two estimators is much larger than the difference
+			between adjacent sample counts. With one uniform-hemisphere sample, almost the
+			entire image is black because only a few random directions happen to hit the
+			small ceiling light. Increasing the count gradually reveals the scene, but even
+			64 hemisphere samples leave dense salt-and-pepper noise. In contrast, light
+			importance sampling produces a useful image with one light ray and is close to
+			converged at 64. Uniform sampling spends most of its work on directions with
+			zero incoming radiance, producing rare, large contributions and high variance.
+			Light sampling concentrates its samples on directions known to carry radiance
+			and corrects them by the light PDF, so it converges much faster. The glow near
+			the ceiling light in the hemisphere result is also absent from the importance
+			sampling result because <code>sample_L</code> accounts for the area light's
+			directionality.
+		</p>
+
+		<div style="display: flex; gap: 12px; align-items: flex-start; text-align: center;">
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part3/hemisphere_64_32.png" alt="Higher-sample uniform hemisphere render" style="width: 100%;"/>
+				<figcaption>Uniform hemisphere sampling with 64 samples per pixel and 32 light rays.</figcaption>
+			</figure>
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part3/importance_64_32.png" alt="Higher-sample light importance render" style="width: 100%;"/>
+				<figcaption>Light importance sampling with 64 samples per pixel and 32 light rays.</figcaption>
+			</figure>
+		</div>
+
+		<h2>Part 4: Global Illumination</h2>
+
+		<h3>Indirect-lighting implementation</h3>
+		<p>
+			My indirect-lighting routine recursively follows light transport through
+			multiple diffuse reflections. At every intersection, I construct a local
+			coordinate frame whose z-axis is the surface normal, compute the hit point, and
+			transform the outgoing direction <code>-r.d</code> into local space. A ray's
+			<code>depth</code> stores the remaining number of bounces. If it reaches zero,
+			<code>at_least_one_bounce_radiance</code> returns no additional radiance.
+		</p>
+		<p>
+			The direct-lighting term depends on the selected bounce mode. When
+			<code>isAccumBounces</code> is true, I add <code>one_bounce_radiance</code> at
+			every visited surface, so a render with depth \(m\) contains the sum of all
+			bounce contributions through \(m\). When it is false, I add direct lighting
+			only when the recursive ray has depth one. For a requested depth \(m\), the
+			camera path therefore follows \(m-1\) BSDF-sampled segments before evaluating
+			direct lighting, which isolates the individual mth-bounce contribution.
+		</p>
+		<p>
+			If more than one bounce remains, I call
+			<code>isect.bsdf-&gt;sample_f</code>. For a diffuse material, this samples a
+			cosine-weighted incoming direction \(\omega_i\) and returns both the BSDF value
+			and its PDF. I transform the direction into world space, create a new ray at the
+			hit point, set <code>min_t = EPS_F</code> to avoid self-intersection, and reduce
+			the remaining depth by one. If the new ray hits another surface, its recursive
+			radiance is weighted as
+		</p>
+		\[
+			L_{\mathrm{indirect}} =
+			\frac{f_r(\omega_o,\omega_i)L_{\mathrm{next}}\cos\theta_i}
+			{p(\omega_i)p_{\mathrm{continue}}}.
+		\]
+		<p>
+			The BSDF and cosine terms account for how the current surface reflects incoming
+			light, while division by the direction PDF and continuation probability makes
+			the Monte Carlo estimator unbiased. At the top level,
+			<code>est_radiance_global_illumination</code> first finds the camera ray's
+			closest intersection. It includes zero-bounce emission in accumulated mode (or
+			when the requested depth is zero) and adds the recursively evaluated
+			one-or-more-bounce radiance whenever the depth is positive.
+		</p>
+
+		<h3>Global illumination results</h3>
+		<div style="display: flex; gap: 12px; align-items: flex-start; text-align: center;">
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part4/global/CBspheres_global_m5_s1024.png" alt="Globally illuminated CBspheres scene" style="width: 100%;"/>
+				<figcaption>CBspheres, 1024 samples per pixel and max ray depth 5.</figcaption>
+			</figure>
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part4/global/CBbunny_global_m5_s1024.png" alt="Globally illuminated CBbunny scene" style="width: 100%;"/>
+				<figcaption>CBbunny, 1024 samples per pixel and max ray depth 5.</figcaption>
+			</figure>
+		</div>
+		<p>
+			Both 1024-sample renders show effects that require indirect illumination. The
+			red and blue walls tint the nearby sides of the white objects, producing visible
+			color bleeding on the spheres and on the bunny. Light reflected from the floor,
+			walls, and ceiling also brightens surfaces that do not face the area light
+			directly. As a result, the lower sides of the spheres, the bunny's shadowed
+			features, and the corners of the Cornell box remain visible rather than becoming
+			completely black. The contact shadows are still present, but their darkest
+			regions are softened by light arriving after additional bounces.
+		</p>
+
+		<h3>Direct and indirect illumination</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_direct_m1_s1024.png" style="width: 100%;" alt="CBbunny with direct illumination only"/>
+						<figcaption>Direct illumination only.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_indirect_m5_s1024.png" style="width: 100%;" alt="CBbunny with indirect illumination only"/>
+						<figcaption>Indirect illumination only.</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="assets/part4/lighting/CBbunny_global_m5_s1024.png" style="width: 100%;" alt="CBbunny with direct and indirect illumination"/>
+						<figcaption>Direct and indirect illumination.</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<p>
+			The direct-only render contains the strongest illumination from the ceiling
+			light, including the bright top-facing surfaces and the well-defined shadow
+			under the bunny. However, the bunny's left-facing and lower regions are very
+			dark because they cannot see the light directly. The indirect-only image removes
+			the directly visible light and direct shadow contribution, but it reveals light
+			that has reflected from the room. This fills the bunny's dark side and clearly
+			shows red and blue color bleeding from the walls. The combined render adds both
+			components: direct illumination provides contrast and a clear soft shadow, while
+			indirect illumination raises the dark regions and gives the white bunny and room
+			a more realistic colored appearance.
+		</p>
+
+		<h3>Exact bounce of light</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m0_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m1_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m2_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m3_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m4_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_exact_m5_s1024.png" style="width: 100%;" alt="CBbunny exact bounce depth 5"/><figcaption>m = 5.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>
+			The zero-bounce image contains only the light's own emission, and the first
+			bounce contains direct lighting. The second bounce is the strongest isolated
+			indirect term: light first reaches the walls, floor, ceiling, or bunny and then
+			reflects once more toward the camera-visible surface. It illuminates areas that
+			are dark in the direct-only result and transfers the red and blue wall colors
+			onto the bunny and the center of the room. The third bounce spreads this energy
+			again, reaching deeper shadowed regions, but it is dimmer because each diffuse
+			reflection absorbs part of the energy. Bounces four and five contribute still
+			less.
+		</p>
+		<p>
+			These higher-order terms are an important difference from a basic rasterized
+			local-lighting result. Direct rasterization can reproduce the first-bounce
+			shading and shadows, but without an additional global-illumination technique it
+			does not naturally model light reflecting between surfaces. The second and third
+			bounces add indirect fill light, soft color bleeding, and detail inside shadows,
+			making the scene appear connected and physically plausible rather than as a set
+			of independently shaded surfaces.
+		</p>
+
+		<h3>Accumulated bounces of light</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m0_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m1_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m2_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m3_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m4_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/bounces/CBbunny_accum_m5_s1024.png" style="width: 100%;" alt="CBbunny accumulated bounces through depth 5"/><figcaption>m = 5.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>
+			The unaccumulated sequence isolates one transport term at a time: depth zero
+			shows emission, depth one shows direct illumination, and each later image shows
+			only light that has undergone that exact number of bounces. This makes the rapid
+			decrease in energy easy to see. In contrast, an accumulated image at depth
+			\(m\) sums the zero-bounce term and every direct or indirect contribution up to
+			that depth. The accumulated depth-one image therefore matches direct lighting
+			plus visible emission; depth two adds the largest indirect component and produces
+			the most noticeable increase in brightness and color bleeding. Depths three,
+			four, and five add progressively smaller corrections. By depth five the result
+			changes only subtly, showing that the finite sum is converging toward the full
+			global-illumination solution.
+		</p>
+
+		<h3>Russian Roulette termination</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m0_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 0"/><figcaption>m = 0.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m1_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 1"/><figcaption>m = 1.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m2_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 2"/><figcaption>m = 2.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m3_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 3"/><figcaption>m = 3.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m4_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 4"/><figcaption>m = 4.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/roulette/CBbunny_rr_m100_s1024.png" style="width: 100%;" alt="CBbunny Russian Roulette depth 100"/><figcaption>m = 100.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>
+			I always trace the first indirect segment from the camera-visible surface. On
+			subsequent recursive calls, Russian Roulette terminates the path with probability
+			0.35 and continues it with probability 0.65. A terminated path contributes no
+			more radiance. When a path survives, I divide its contribution by the continuation
+			probability 0.65. The expected value is therefore unchanged:
+			\(0.65(L/0.65)+0.35(0)=L\), so the estimator remains unbiased even though most
+			very long paths end early.
+		</p>
+		<p>
+			At maximum depth zero, only the ceiling light is visible. Depth one adds direct
+			illumination but leaves strongly shadowed regions dark. Depth two produces the
+			largest visual change by adding the first indirect reflection, which brightens
+			the room and introduces wall-color bleeding. Depths three and four refine the
+			shadowed regions with smaller multi-bounce contributions. The depth-100 render is
+			visually almost the same as the moderate-depth results because diffuse energy
+			decreases at every bounce and Russian Roulette makes extremely long paths rare.
+			Thus, Russian Roulette permits a high maximum depth without requiring every path
+			to trace all 100 bounces.
+		</p>
+
+		<h3>Samples per pixel</h3>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0001_l4_m5.png" style="width: 100%;" alt="CBbunny with 1 sample per pixel"/><figcaption>1 sample per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0002_l4_m5.png" style="width: 100%;" alt="CBbunny with 2 samples per pixel"/><figcaption>2 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0004_l4_m5.png" style="width: 100%;" alt="CBbunny with 4 samples per pixel"/><figcaption>4 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0008_l4_m5.png" style="width: 100%;" alt="CBbunny with 8 samples per pixel"/><figcaption>8 samples per pixel.</figcaption></td>
+				</tr>
+				<tr>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0016_l4_m5.png" style="width: 100%;" alt="CBbunny with 16 samples per pixel"/><figcaption>16 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp0064_l4_m5.png" style="width: 100%;" alt="CBbunny with 64 samples per pixel"/><figcaption>64 samples per pixel.</figcaption></td>
+					<td style="text-align: center;"><img src="assets/part4/samples/CBbunny_spp1024_l4_m5.png" style="width: 100%;" alt="CBbunny with 1024 samples per pixel"/><figcaption>1024 samples per pixel.</figcaption></td>
+				</tr>
+			</table>
+		</div>
+		<p>
+			With one sample per pixel, the entire image is dominated by high-contrast
+			salt-and-pepper noise, and the bunny's surface and shadow are difficult to read.
+			Two and four samples begin to reveal stable geometry and the overall red/blue
+			color bleeding, but large fluctuations remain across the walls, ceiling, and
+			bunny. At eight and sixteen samples, broad surfaces become more consistent and
+			the bunny's silhouette and soft shadow are much clearer. The 64-sample image is
+			mostly stable but still has visible fine-grained noise. At 1024 samples, the
+			walls and bunny are smooth, the penumbra is clean, and the indirect color
+			gradients are continuous.
+		</p>
+		<p>
+			The slowest regions to converge are the soft-shadow boundary, the bunny's
+			geometrically detailed surface, and indirectly illuminated areas such as its
+			underside and the corners of the box. These pixels depend on visibility to only
+			part of the area light or on several random BSDF samples surviving multiple
+			bounces, so their radiance estimates have higher variance than directly lit,
+			flat regions. Increasing the number of independent camera samples averages these
+			fluctuations and reduces the noise at the expected Monte Carlo rate.
+		</p>
+
+		<h2>Part 5: Adaptive Sampling</h2>
+
+		<h3>Adaptive-sampling implementation</h3>
+		<p>
+			Adaptive sampling gives each pixel only as many camera samples as it needs to
+			reach a statistical convergence target. In <code>raytrace_pixel</code>,
+			<code>ns_aa</code> is the maximum sample budget rather than a sample count that
+			every pixel must use. I still generate each camera ray from a random subpixel
+			position, trace it with <code>max_ray_depth</code>, and add its radiance to the
+			pixel total. In addition, I convert every sample color to scalar illuminance
+			\(x_i\) and maintain the two running sums
+		</p>
+		\[
+			s_1=\sum_{i=1}^{n}x_i, \qquad
+			s_2=\sum_{i=1}^{n}x_i^2.
+		\]
+		<p>
+			After each batch of <code>samplesPerBatch</code> samples, provided that at
+			least two samples have been taken, I compute the sample mean and unbiased sample
+			variance:
+		</p>
+		\[
+			\mu=\frac{s_1}{n}, \qquad
+			\sigma^2=\frac{s_2-s_1^2/n}{n-1}.
+		\]
+		<p>
+			I clamp a very small negative variance to zero because floating-point
+			roundoff can otherwise make the square root invalid. The half-width of the
+			95% confidence interval is
+		</p>
+		\[
+			I=1.96\frac{\sigma}{\sqrt{n}}.
+		\]
+		<p>
+			The pixel is considered converged when
+			\(I\leq\texttt{maxTolerance}\,\mu\). At that point, the loop exits early;
+			otherwise it continues until the maximum <code>ns_aa</code> samples have been
+			used. Checking only at batch boundaries avoids performing the convergence test
+			after every ray and prevents decisions from being made from too few samples.
+			The renderer's default batch size is 32 and its default relative tolerance is
+			0.05.
+		</p>
+		<p>
+			Finally, I divide the accumulated radiance by the actual sample count
+			\(n\), update the output pixel, and store \(n\) in
+			<code>sampleCountBuffer</code>. The sampling-rate image visualizes
+			<code>n / ns_aa</code>: blue represents a low sampling rate, green represents
+			approximately half of the maximum budget, and red represents pixels that used
+			most or all of the available samples.
+		</p>
+
+		<p>
+			For both tests below, I used a maximum of 2048 samples per pixel, one light
+			ray, and a maximum ray depth of five.
+		</p>
+
+		<h3>CBbunny adaptive-sampling result</h3>
+		<div style="display: flex; gap: 12px; align-items: flex-start; text-align: center;">
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part5/bunny.png" alt="Adaptively sampled CBbunny render" style="width: 100%;"/>
+				<figcaption>Adaptive CBbunny render.</figcaption>
+			</figure>
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part5/bunny_rate.png" alt="CBbunny adaptive sampling-rate visualization" style="width: 100%;"/>
+				<figcaption>CBbunny sampling rate: blue is low, green is medium, and red is high.</figcaption>
+			</figure>
+		</div>
+		<p>
+			The bunny rate image assigns the largest sample counts to the detailed bunny
+			geometry, especially its face, ears, body contours, and high-contrast shading
+			changes. The soft contact shadow on the floor is also red or yellow because
+			visibility to the area light varies strongly across the penumbra. Pixels around
+			the ceiling light and the bright-to-dark transition on the upper walls require
+			more samples for the same reason. In contrast, broad regions of the back wall
+			and floor are mostly blue: their illumination varies smoothly and their sample
+			variance becomes small enough to satisfy the confidence test early. This
+			allocation preserves detail in the final bunny render while avoiding a uniform
+			2048 samples over every flat region.
+		</p>
+
+		<h3>CBspheres adaptive-sampling result</h3>
+		<div style="display: flex; gap: 12px; align-items: flex-start; text-align: center;">
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part5/spheres.png" alt="Adaptively sampled CBspheres render" style="width: 100%;"/>
+				<figcaption>Adaptive CBspheres render.</figcaption>
+			</figure>
+			<figure style="width: 50%; margin: 0;">
+				<img src="assets/part5/spheres_rate.png" alt="CBspheres adaptive sampling-rate visualization" style="width: 100%;"/>
+				<figcaption>CBspheres sampling rate: blue is low, green is medium, and red is high.</figcaption>
+			</figure>
+		</div>
+		<p>
+			The interiors of the two dark spheres are nearly uniform and therefore appear
+			blue in the sampling-rate image, but their thin silhouettes require more
+			samples because subpixel rays can alternate between the sphere and the
+			background. The most expensive regions are the two soft shadows, whose red and
+			yellow bands mark rapidly changing partial visibility of the area light. As in
+			the bunny scene, the smooth center of the back wall converges early, while the
+			ceiling and the region around the light use more samples.
+		</p>
+		<p>
+			Compared with the bunny, the spheres scene concentrates its high sample counts
+			into narrow boundaries and shadows, whereas the bunny needs high rates across a
+			larger portion of the object because of its complex geometry and changing
+			normals. Both results demonstrate the intended behavior: low-variance, smooth
+			areas stop early, while silhouettes, penumbrae, detailed geometry, and strongly
+			indirectly illuminated regions continue sampling until their confidence
+			interval is sufficiently small.
+		</p>
+
+		</div>
+	</body>
+</html>
