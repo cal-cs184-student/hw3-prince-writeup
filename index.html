@@ -835,22 +835,28 @@
 			</figure>
 		</div>
 		<p>
-			The interiors of the two dark spheres are nearly uniform and therefore appear
-			blue in the sampling-rate image, but their thin silhouettes require more
-			samples because subpixel rays can alternate between the sphere and the
-			background. The most expensive regions are the two soft shadows, whose red and
-			yellow bands mark rapidly changing partial visibility of the area light. As in
-			the bunny scene, the smooth center of the back wall converges early, while the
-			ceiling and the region around the light use more samples.
+			The new spheres render contains smooth diffuse shading and clear red and blue
+			color bleeding. In the sampling-rate image, the directly lit upper portions of
+			the spheres are mostly blue because their illumination changes smoothly and
+			converges quickly. The rates increase through green and red toward the lower
+			hemispheres, where the estimate depends more strongly on indirect illumination
+			and partial occlusion. This effect is especially visible on the right sphere,
+			whose lower half uses close to the maximum sample budget. The two soft shadows
+			also form red and yellow bands because small changes in the sampled light point
+			produce large visibility changes across each penumbra. The flat center of the
+			back wall remains mostly blue, while the ceiling and the transition surrounding
+			the area light require substantially more samples.
 		</p>
 		<p>
-			Compared with the bunny, the spheres scene concentrates its high sample counts
-			into narrow boundaries and shadows, whereas the bunny needs high rates across a
-			larger portion of the object because of its complex geometry and changing
-			normals. Both results demonstrate the intended behavior: low-variance, smooth
-			areas stop early, while silhouettes, penumbrae, detailed geometry, and strongly
-			indirectly illuminated regions continue sampling until their confidence
-			interval is sufficiently small.
+			Compared with the bunny, the spheres scene has simple, smooth geometry, so its
+			upper surfaces converge with relatively few samples. Its high-rate regions are
+			concentrated on the indirectly lit lower hemispheres and the two broad soft
+			shadows. The bunny instead uses high rates across much of its body, face, ears,
+			and contact shadow because its detailed geometry and rapidly changing normals
+			create variance over a larger area. Both results show the intended adaptive
+			behavior: stable, smoothly illuminated regions stop early, while penumbrae,
+			complex geometry, strong light–shadow transitions, and indirect illumination
+			continue sampling until the confidence interval becomes sufficiently small.
 		</p>
 
 		</div>
